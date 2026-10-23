@@ -1,0 +1,33 @@
+
+### server never reads a 30 MB request, -rpcclienttimeout=3 (timeout 20 = hung)
+$ (exit 124, 20s)
+
+
+### server streams headers forever (2 GB memory cap, timeout 20)
+$ (exit 124, 20s)
+
+
+### server returns a non-object error
+$ (exit 1, 0s)
+error: JSON value of type null is not of expected type number
+
+### server returns error code 0
+$ (exit 0, 0s)
+error code: 0
+error message:
+zero code
+
+### -generate when generatetoaddress fails on the server
+$ (exit 0, 0s)
+{
+  "address": "bcrt1qtestaddress",
+  "blocks": null
+}
+
+### regression: valid chunked response with trailer
+$ (exit 0, 0s)
+chunked-ok
+
+### regression: close-delimited response
+$ (exit 0, 0s)
+close-ok

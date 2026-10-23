@@ -1,0 +1,211 @@
+
+$ bitcoin-cli createwallet alice
+{
+  "name": "alice"
+}
+(exit 0)
+
+$ bitcoin-cli -generate 101
+{
+  "address": "bcrt1qemhm4g56jg28kw0rwmr9vjw7k85lj6z5rhna9v",
+  "blocks": [
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>",
+    "<hash>"
+  ]
+}
+(exit 0)
+
+$ bitcoin-cli getbalance
+50.00000000
+(exit 0)
+
+$ bitcoin-cli -named sendtoaddress address=bcrt1qz639mywzx2sjypsmvlmd6z0cq2uzragcpdezt4 amount=1.5
+0d644b634bd2c815117d9d5bced9e317d08f9299d6d1a249714a700f6c5be4d2
+(exit 0)
+
+$ bitcoin-cli getmempoolinfo
+{
+  "loaded": true,
+  "size": 1,
+  "bytes": 141,
+  "usage": 1304,
+  "total_fee": 0.00002820,
+  "maxmempool": 300000000,
+  "mempoolminfee": 0.00000100,
+  "minrelaytxfee": 0.00000100,
+  "incrementalrelayfee": 0.00000100,
+  "unbroadcastcount": 1,
+  "permitbaremultisig": true,
+  "maxdatacarriersize": 100000,
+  "limitclustercount": 64,
+  "limitclustersize": 101000,
+  "optimal": true
+}
+(exit 0)
+
+$ bitcoin-cli -generate 1
+{
+  "address": "bcrt1q07h97l2y2pjhfk4jwryvgjgyq8e6qp96usx6cu",
+  "blocks": [
+    "<hash>"
+  ]
+}
+(exit 0)
+
+$ bitcoin-cli -getinfo -color=never
+Chain: regtest
+Blocks: 102
+Headers: 102
+Verification progress: 100.0000%
+Difficulty: 4.656542373906925e-10
+
+Network: in 0, out 0, total 0
+Version: 329900
+Time offset (s): 0
+Proxies: n/a
+Min tx relay fee rate (BTC/kvB): 0.00000100
+
+Wallet: alice
+Keypool size: 4000
+Balance: 99.99997180
+
+Warnings: (none)
+(exit 0)
+
+$ bitcoin-cli -netinfo
+Bitcoin Core client v32.99.0-152a55397e45-dirty regtest - server 70017/Satoshi:32.99.0/
+
+         ipv4    ipv6   total   block
+in          0       0       0
+out         0       0       0       0
+total       0       0       0
+
+Local services: network, witness, network limited, p2p v2
+
+Local addresses: n/a
+
+(exit 0)
+
+$ bitcoin-cli -addrinfo
+{
+  "addresses_known": {
+    "ipv4": 0,
+    "ipv6": 0,
+    "onion": 0,
+    "i2p": 0,
+    "cjdns": 0,
+    "total": 0
+  }
+}
+(exit 0)
+
+$ bitcoin-cli getblock nonexistent
+error code: -8
+error message:
+blockhash must be of length 64 (not 11, for 'nonexistent')
+(exit 8)
+
+$ bitcoin-cli -rpcwallet=missing getbalance
+error code: -18
+error message:
+Requested wallet does not exist or is not loaded
+(exit 18)

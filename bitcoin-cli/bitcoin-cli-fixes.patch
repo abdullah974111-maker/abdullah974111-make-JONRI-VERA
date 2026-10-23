@@ -1,0 +1,138 @@
+diff --git a/src/bitcoin-cli.cpp b/src/bitcoin-cli.cpp
+index 38260ba..197ff09 100644
+--- a/src/bitcoin-cli.cpp
++++ b/src/bitcoin-cli.cpp
+@@ -36,6 +36,7 @@
+ #include <chrono>
+ #include <cmath>
+ #include <cstdio>
++#include <cstdlib>
+ #include <functional>
+ #include <limits>
+ #include <memory>
+@@ -76,6 +77,9 @@ static constexpr std::array UNREACHABLE_NETWORK_IDS{/*not_publicly_routable*/0,
+ /** Default number of blocks to generate for RPC generatetoaddress. */
+ static const std::string DEFAULT_NBLOCKS = "1";
+ 
++/** Maximum size of the HTTP response status line and headers (and of chunk metadata). */
++static constexpr size_t MAX_HEADERS_SIZE{64 * 1024};
++
+ /** Default -color setting. */
+ static const std::string DEFAULT_COLOR_SETTING{"auto"};
+ 
+@@ -768,6 +772,8 @@ public:
+ 
+     UniValue ProcessReply(const UniValue &reply) override
+     {
++        // Pass server errors on, so that they are reported and set the exit code.
++        if (!reply["error"].isNull()) return reply;
+         UniValue result(UniValue::VOBJ);
+         result.pushKV("address", address_str);
+         result.pushKV("blocks", reply.get_obj()["result"]);
+@@ -909,13 +915,16 @@ bool HTTPClient::SendRequest(std::string_view request)
+     while (!request.empty()) {
+         Sock::Event event{0};
+         if (!m_socket->Wait(m_timeout, Sock::SendEvent, &event)) {
++            if (!IOErrorIsPermanent(WSAGetLastError())) continue; // e.g. EINTR
+             return false;
+         }
+ 
+-        if (!(event & Sock::SendEvent)) {
+-            continue;
++        // Wait() reports a timeout as success with no events set.
++        if (event == 0) {
++            return false;
+         }
+ 
++        // On SendEvent or ErrorEvent, send() either makes progress or reports the socket error.
+         ssize_t sent = m_socket->Send(request.data(), request.size(), MSG_NOSIGNAL);
+         if (sent < 0) {
+             int err = WSAGetLastError();
+@@ -939,6 +948,7 @@ HTTPResponse HTTPClient::ReadResponse()
+     size_t headers_end = 0;
+ 
+     while (headers_end == 0) {
++        const size_t old_size{buffer.size()};
+         if (auto result{Recv()}) {
+             buffer.append(*result);
+         } else {
+@@ -946,10 +956,13 @@ HTTPResponse HTTPClient::ReadResponse()
+             continue;
+         }
+ 
+-        // Check for header terminator
+-        size_t pos = buffer.find("\r\n\r\n");
++        // Check for header terminator, only rescanning the bytes that could
++        // complete one, and give up if the server never ends its headers.
++        size_t pos = buffer.find("\r\n\r\n", old_size < 3 ? 0 : old_size - 3);
+         if (pos != std::string::npos) {
+             headers_end = pos + 4;
++        } else if (buffer.size() > MAX_HEADERS_SIZE) {
++            throw HTTPError{"Response headers too large"};
+         }
+     }
+ 
+@@ -1037,6 +1050,9 @@ HTTPResponse HTTPClient::ReadResponse()
+                     while (true) {
+                         size_t crlf_pos = buffer.find("\r\n");
+                         if (crlf_pos == std::string::npos) {
++                            if (buffer.size() > MAX_HEADERS_SIZE) {
++                                throw HTTPError{"Chunked trailer too large"};
++                            }
+                             // Need more data
+                             if (auto result{Recv()}) {
+                                 buffer.append(*result);
+@@ -1066,6 +1082,8 @@ HTTPResponse HTTPClient::ReadResponse()
+                     buffer.erase(0, chunk_end);
+                     continue;
+                 }
++            } else if (buffer.size() > MAX_HEADERS_SIZE) {
++                throw HTTPError{"Chunk size line too long"};
+             }
+ 
+             // Need more data
+@@ -1114,18 +1132,19 @@ HTTPResponse HTTPClient::ReadResponse()
+ 
+ std::optional<std::string> HTTPClient::Recv()
+ {
+-    auto wait_for_readable{[this](std::chrono::milliseconds timeout) -> bool {
+-        Sock::Event event{0};
+-        if (!m_socket->Wait(timeout, Sock::RecvEvent, &event)) {
+-            return false;
+-        }
+-        return (event & Sock::RecvEvent) != 0;
+-    }};
++    Sock::Event event{0};
++    if (!m_socket->Wait(m_timeout, Sock::RecvEvent, &event)) {
++        const int err{WSAGetLastError()};
++        if (!IOErrorIsPermanent(err)) return std::nullopt; // e.g. EINTR
++        throw CConnectionFailed{strprintf("Wait error: %s", NetworkErrorString(err))};
++    }
+ 
+-    if (!wait_for_readable(m_timeout)) {
++    // Wait() reports a timeout as success with no events set.
++    if (event == 0) {
+         throw CConnectionFailed{"timeout"};
+     }
+ 
++    // On RecvEvent or ErrorEvent, recv() returns the data, EOF, or the actual socket error.
+     char recv_buf[4096];
+     ssize_t nrecv = m_socket->Recv(recv_buf, sizeof(recv_buf), /*flags=*/0);
+ 
+@@ -1345,7 +1364,15 @@ static void ParseError(const UniValue& error, std::string& strPrint, int& nRet)
+     } else {
+         strPrint = "error: " + error.write();
+     }
+-    nRet = abs(error["code"].getInt<int>());
++    // Use the absolute error code as exit code if there is one, but never exit
++    // successfully (or overflow abs()) on an error.
++    nRet = EXIT_FAILURE;
++    if (const UniValue& err_code{error["code"]}; err_code.isNum()) {
++        const int64_t code{err_code.getInt<int64_t>()};
++        if (code != 0 && code > std::numeric_limits<int>::min() && code <= std::numeric_limits<int>::max()) {
++            nRet = std::abs(static_cast<int>(code));
++        }
++    }
+ }
+ 
+ /**
