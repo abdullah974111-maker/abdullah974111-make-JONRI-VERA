@@ -1,0 +1,9 @@
+# Netlify: deploys the Bitcoin wallet generator in btc-wallet-generator/.
+# The build runs the BIP39/BIP84 test vectors first, so a broken build never goes live.
+[build]
+  base = "btc-wallet-generator"
+  command = "npm ci && npm test && npm run build"
+  publish = "site"
+
+[build.environment]
+  NODE_VERSION = "22"

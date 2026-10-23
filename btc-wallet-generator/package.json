@@ -1,0 +1,22 @@
+{
+  "type": "module",
+  "name": "btc-wallet-generator",
+  "version": "1.0.0",
+  "description": "Free, offline-capable Bitcoin wallet generator (BIP39/BIP84) that runs entirely in the browser",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test.mjs",
+    "test:e2e": "node e2e.cjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "@scure/base": "^1.2.6",
+    "@scure/bip32": "^1.7.0",
+    "@scure/bip39": "^1.6.0"
+  },
+  "private": true,
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

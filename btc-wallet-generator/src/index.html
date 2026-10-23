@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="__CSP__">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Free, open-source Bitcoin wallet generator. Creates a recovery phrase and addresses entirely in your browser; nothing is sent anywhere.">
+<title>Bitcoin Wallet Generator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f7931a'/%3E%3Cpath d='M11 8v16M14 8v2M14 22v2M11 9h6.5a3.5 3.5 0 0 1 0 7H11m0 0h7.5a3.5 3.5 0 0 1 0 7H11' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>__STYLE__</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M11 8v16M14 8v2M14 22v2M11 9h6.5a3.5 3.5 0 0 1 0 7H11m0 0h7.5a3.5 3.5 0 0 1 0 7H11"/></svg>
+      <div>
+        <h1>Bitcoin Wallet Generator</h1>
+        <p class="lede">Create a new Bitcoin wallet in your browser. Free and open source. Nothing you do here is sent anywhere.</p>
+      </div>
+    </div>
+    <span id="net-status" class="chip" role="status"></span>
+  </header>
+
+  <details class="callout" open>
+    <summary>Before you use this for real money</summary>
+    <ol>
+      <li><strong>Go offline.</strong> <a id="download-link" href="index.html" download="bitcoin-wallet-generator.html">Download this page</a>, disconnect from the internet, and open the file. It works fully offline.</li>
+      <li><strong>Write the recovery phrase on paper.</strong> Never photograph it, type it into a chat, or store it in the cloud.</li>
+      <li><strong>Whoever has the phrase owns the coins.</strong> Never share it with anyone, including "support" staff.</li>
+      <li><strong>A lost phrase cannot be recovered</strong>, by this site or anyone else. Tools that claim to "calculate" the private key of an address are scams.</li>
+    </ol>
+  </details>
+
+  <main class="card">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-new" aria-selected="true" aria-controls="panel-new">New wallet</button>
+      <button role="tab" id="tab-restore" aria-selected="false" aria-controls="panel-restore">Restore from phrase</button>
+    </div>
+
+    <section id="panel-new" role="tabpanel" aria-labelledby="tab-new">
+      <p class="hint">Generates a fresh recovery phrase using your device's secure random number generator.</p>
+      <div class="row">
+        <div class="segmented" role="radiogroup" aria-label="Phrase length">
+          <label><input type="radio" name="words" value="12" checked><span>12 words</span></label>
+          <label><input type="radio" name="words" value="24"><span>24 words</span></label>
+        </div>
+        <button id="generate" class="primary">Generate wallet</button>
+      </div>
+    </section>
+
+    <section id="panel-restore" role="tabpanel" aria-labelledby="tab-restore" hidden>
+      <p class="hint">See the addresses of a phrase you already own, for example to check your backup. This cannot find the phrase for an address.</p>
+      <label class="field">
+        <span>Recovery phrase</span>
+        <textarea id="restore-input" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="word1 word2 word3 …"></textarea>
+      </label>
+      <p id="restore-error" class="error" aria-live="polite"></p>
+      <button id="restore" class="primary">Show addresses</button>
+    </section>
+
+    <details class="advanced">
+      <summary>Advanced options</summary>
+      <div class="grid">
+        <label class="field">
+          <span>Network</span>
+          <select id="network">
+            <option value="mainnet">Bitcoin mainnet (bc1…)</option>
+            <option value="testnet">Bitcoin testnet (tb1…)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Addresses to show</span>
+          <select id="count">
+            <option>5</option><option>10</option><option>20</option>
+          </select>
+        </label>
+        <label class="field wide">
+          <span>Optional passphrase (BIP39 "25th word")</span>
+          <input id="passphrase" type="password" autocomplete="off" spellcheck="false">
+          <small>Creates a completely different wallet. If you forget it, the coins are lost, even with the phrase.</small>
+        </label>
+      </div>
+    </details>
+  </main>
+
+  <section id="result" class="card result" hidden aria-live="polite">
+    <div class="result-head">
+      <h2>Your wallet</h2>
+      <div class="actions">
+        <button id="print" class="ghost">Print</button>
+        <button id="clear" class="ghost danger">Clear</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <h3>Recovery phrase</h3>
+        <div class="actions">
+          <button id="toggle-phrase" class="ghost">Reveal</button>
+          <button id="copy-phrase" class="ghost">Copy</button>
+        </div>
+      </div>
+      <ol id="phrase" class="phrase concealed"></ol>
+      <p class="warn">Write these words down in order and keep them somewhere safe. They are the only backup of this wallet.</p>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <h3>Receive addresses</h3>
+        <label class="switch"><input type="checkbox" id="show-keys"><span>Show private keys</span></label>
+      </div>
+      <p class="hint">Give any of these to someone who wants to send you bitcoin. They all belong to this wallet.</p>
+      <div class="table-wrap"><table id="receive" class="keys"></table></div>
+      <details class="sub">
+        <summary>Change addresses</summary>
+        <p class="hint">Used automatically by wallet apps for change. You normally don't need these.</p>
+        <div class="table-wrap"><table id="change" class="keys"></table></div>
+      </details>
+    </div>
+
+    <div class="block">
+      <div class="block-head"><h3>Watch-only key</h3><button class="ghost" id="copy-xpub">Copy</button></div>
+      <p class="hint">Import this into a wallet app to watch your balance. It can't spend coins, but it does reveal all your addresses.</p>
+      <code id="xpub" class="mono long"></code>
+      <dl class="meta">
+        <div><dt>Derivation</dt><dd id="path" class="mono"></dd></div>
+        <div><dt>Address type</dt><dd>Native SegWit (BIP84, P2WPKH)</dd></div>
+        <div><dt>Network</dt><dd id="network-label"></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Compatible with standard wallets such as Sparrow, Electrum, BlueWallet and hardware wallets: restore the phrase there with "Native SegWit".</p>
+    <p>Built on the audited <a href="https://paulmillr.com/noble/" rel="noopener noreferrer">noble &amp; scure</a> cryptography libraries. Verified against the official BIP39 and BIP84 test vectors. No tracking, no cookies, no network requests.</p>
+  </footer>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>__SCRIPT__</script>
+</body>
+</html>

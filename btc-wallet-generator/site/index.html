@@ -1,0 +1,2383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-f+ToNQCAmfvTpUjnfW8OYURW5kTIw6ciJm1TkrE/Upo='; style-src 'sha256-WTVeUPj3i8NcAowQWW9WV+Keq4XZo0HWBrCHlrW2fwY='; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Free, open-source Bitcoin wallet generator. Creates a recovery phrase and addresses entirely in your browser; nothing is sent anywhere.">
+<title>Bitcoin Wallet Generator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f7931a'/%3E%3Cpath d='M11 8v16M14 8v2M14 22v2M11 9h6.5a3.5 3.5 0 0 1 0 7H11m0 0h7.5a3.5 3.5 0 0 1 0 7H11' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>:root {
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #f1efea;
+  --border: #e3e0d8;
+  --text: #1c1b19;
+  --muted: #6b675f;
+  --accent: #f7931a;
+  --accent-ink: #9a5200;
+  --accent-soft: #fdf1e1;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --ok: #1d7a46;
+  --focus: #2563eb;
+  --shadow: 0 1px 2px rgba(28, 27, 25, .05), 0 4px 16px rgba(28, 27, 25, .05);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141311;
+    --surface: #1c1b18;
+    --surface-2: #24221f;
+    --border: #34312c;
+    --text: #ece9e2;
+    --muted: #a39e94;
+    --accent: #f7931a;
+    --accent-ink: #ffb65c;
+    --accent-soft: #2e2214;
+    --danger: #ff8a7a;
+    --danger-soft: #3a1d19;
+    --ok: #5fd08e;
+    --focus: #7aa7ff;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 var(--sans);
+}
+a { color: var(--accent-ink); }
+.page { max-width: 820px; margin: 0 auto; padding: 32px 16px 56px; }
+
+/* Header */
+.masthead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.brand { display: flex; gap: 14px; align-items: flex-start; }
+.mark { width: 44px; height: 44px; flex: none; }
+.mark rect { fill: var(--accent); }
+.mark path { stroke: #fff; stroke-width: 2.4; fill: none; stroke-linecap: round; }
+h1 { font-size: 1.6rem; line-height: 1.2; margin: 2px 0 4px; letter-spacing: -.01em; }
+.lede { margin: 0; color: var(--muted); max-width: 52ch; }
+.chip {
+  flex: none; font-size: .8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); white-space: nowrap;
+}
+.chip::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: currentColor; }
+.chip.online { color: var(--accent-ink); }
+.chip.offline { color: var(--ok); }
+
+/* Callout */
+.callout {
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 20px;
+}
+.callout summary { font-weight: 700; cursor: pointer; }
+.callout ol { margin: 10px 0 2px; padding-left: 1.25rem; }
+.callout li { margin: 6px 0; }
+
+/* Cards */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px;
+}
+.tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 10px; margin-bottom: 16px; }
+.tabs button {
+  flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600;
+  padding: 8px 12px; border-radius: 7px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.hint { color: var(--muted); font-size: .92rem; margin: 0 0 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* Controls */
+button { font: inherit; }
+.primary {
+  background: var(--accent); color: #1c1200; border: 0; font-weight: 700;
+  padding: 10px 18px; border-radius: 10px; cursor: pointer;
+}
+.primary:hover { filter: brightness(1.05); }
+.ghost {
+  background: transparent; color: var(--text); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600;
+}
+.ghost:hover { background: var(--surface-2); }
+.ghost.danger { color: var(--danger); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span { display: block; padding: 9px 14px; cursor: pointer; font-weight: 600; color: var(--muted); }
+.segmented input:checked + span { background: var(--surface-2); color: var(--text); }
+.segmented input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; font-size: .9rem; font-weight: 600; }
+.field small { font-weight: 400; color: var(--muted); }
+textarea, input[type="password"], select {
+  font: inherit; font-weight: 400; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; width: 100%;
+}
+textarea { font-family: var(--mono); font-size: .95rem; resize: vertical; }
+.error { color: var(--danger); font-size: .9rem; min-height: 1.4em; margin: 6px 0 10px; }
+
+.advanced { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+.advanced summary, .sub summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.grid .wide { grid-column: 1 / -1; }
+
+/* Result */
+.result-head, .block-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.result-head h2 { margin: 0; font-size: 1.25rem; }
+.actions { display: flex; gap: 8px; }
+.block { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px; }
+.block h3 { margin: 0; font-size: 1rem; }
+.block-head { margin-bottom: 10px; }
+.warn { font-size: .9rem; color: var(--accent-ink); margin: 12px 0 0; }
+
+.phrase {
+  list-style: none; margin: 0; padding: 0; counter-reset: w;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px;
+}
+.phrase li {
+  counter-increment: w; background: var(--surface-2); border-radius: 8px; padding: 8px 10px;
+  font-family: var(--mono); font-size: .98rem; transition: filter .15s;
+}
+.phrase li::before { content: counter(w) "."; color: var(--muted); display: inline-block; min-width: 2.2ch; margin-right: 6px; font-size: .85rem; }
+.phrase.concealed li { filter: blur(6px); user-select: none; }
+
+.switch { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; }
+.switch input { width: 16px; height: 16px; accent-color: var(--danger); }
+
+.table-wrap { overflow-x: auto; }
+table.keys { width: 100%; border-collapse: collapse; font-size: .9rem; }
+table.keys th { text-align: left; font-weight: 600; color: var(--muted); font-size: .8rem; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+table.keys td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.keys td.idx { color: var(--muted); width: 2.5ch; }
+table.keys td.btn { width: 1%; white-space: nowrap; text-align: right; }
+table.keys .key-col { display: none; }
+table.keys.with-keys .key-col { display: table-cell; }
+table.keys .wif { color: var(--danger); }
+.mono { font-family: var(--mono); overflow-wrap: anywhere; }
+.long { display: block; background: var(--surface-2); padding: 10px 12px; border-radius: 8px; font-size: .85rem; }
+.sub { margin-top: 12px; }
+.sub .hint { margin-top: 8px; }
+
+.meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0 0; }
+.meta dt { color: var(--muted); font-size: .8rem; font-weight: 600; }
+.meta dd { margin: 2px 0 0; font-size: .9rem; }
+
+.footer { color: var(--muted); font-size: .85rem; text-align: center; }
+.footer p { margin: 6px auto; max-width: 64ch; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0;
+  background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: .9rem;
+  transition: opacity .2s, transform .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 560px) {
+  .masthead { flex-direction: column; }
+  .grid, .meta { grid-template-columns: 1fr; }
+  .row .primary { width: 100%; }
+  .phrase { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media print {
+  body { background: #fff; color: #000; }
+  .masthead .chip, .callout, main.card, .footer, .actions, .switch, .hint, button, .toast { display: none !important; }
+  .card { border: 0; box-shadow: none; padding: 0; }
+  .sub { display: block; }
+  .sub summary { display: none; }
+  .phrase li { background: #fff; border: 1px solid #999; }
+  .phrase.concealed li { filter: none; color: transparent; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M11 8v16M14 8v2M14 22v2M11 9h6.5a3.5 3.5 0 0 1 0 7H11m0 0h7.5a3.5 3.5 0 0 1 0 7H11"/></svg>
+      <div>
+        <h1>Bitcoin Wallet Generator</h1>
+        <p class="lede">Create a new Bitcoin wallet in your browser. Free and open source. Nothing you do here is sent anywhere.</p>
+      </div>
+    </div>
+    <span id="net-status" class="chip" role="status"></span>
+  </header>
+
+  <details class="callout" open>
+    <summary>Before you use this for real money</summary>
+    <ol>
+      <li><strong>Go offline.</strong> <a id="download-link" href="index.html" download="bitcoin-wallet-generator.html">Download this page</a>, disconnect from the internet, and open the file. It works fully offline.</li>
+      <li><strong>Write the recovery phrase on paper.</strong> Never photograph it, type it into a chat, or store it in the cloud.</li>
+      <li><strong>Whoever has the phrase owns the coins.</strong> Never share it with anyone, including "support" staff.</li>
+      <li><strong>A lost phrase cannot be recovered</strong>, by this site or anyone else. Tools that claim to "calculate" the private key of an address are scams.</li>
+    </ol>
+  </details>
+
+  <main class="card">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-new" aria-selected="true" aria-controls="panel-new">New wallet</button>
+      <button role="tab" id="tab-restore" aria-selected="false" aria-controls="panel-restore">Restore from phrase</button>
+    </div>
+
+    <section id="panel-new" role="tabpanel" aria-labelledby="tab-new">
+      <p class="hint">Generates a fresh recovery phrase using your device's secure random number generator.</p>
+      <div class="row">
+        <div class="segmented" role="radiogroup" aria-label="Phrase length">
+          <label><input type="radio" name="words" value="12" checked><span>12 words</span></label>
+          <label><input type="radio" name="words" value="24"><span>24 words</span></label>
+        </div>
+        <button id="generate" class="primary">Generate wallet</button>
+      </div>
+    </section>
+
+    <section id="panel-restore" role="tabpanel" aria-labelledby="tab-restore" hidden>
+      <p class="hint">See the addresses of a phrase you already own, for example to check your backup. This cannot find the phrase for an address.</p>
+      <label class="field">
+        <span>Recovery phrase</span>
+        <textarea id="restore-input" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="word1 word2 word3 …"></textarea>
+      </label>
+      <p id="restore-error" class="error" aria-live="polite"></p>
+      <button id="restore" class="primary">Show addresses</button>
+    </section>
+
+    <details class="advanced">
+      <summary>Advanced options</summary>
+      <div class="grid">
+        <label class="field">
+          <span>Network</span>
+          <select id="network">
+            <option value="mainnet">Bitcoin mainnet (bc1…)</option>
+            <option value="testnet">Bitcoin testnet (tb1…)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Addresses to show</span>
+          <select id="count">
+            <option>5</option><option>10</option><option>20</option>
+          </select>
+        </label>
+        <label class="field wide">
+          <span>Optional passphrase (BIP39 "25th word")</span>
+          <input id="passphrase" type="password" autocomplete="off" spellcheck="false">
+          <small>Creates a completely different wallet. If you forget it, the coins are lost, even with the phrase.</small>
+        </label>
+      </div>
+    </details>
+  </main>
+
+  <section id="result" class="card result" hidden aria-live="polite">
+    <div class="result-head">
+      <h2>Your wallet</h2>
+      <div class="actions">
+        <button id="print" class="ghost">Print</button>
+        <button id="clear" class="ghost danger">Clear</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <h3>Recovery phrase</h3>
+        <div class="actions">
+          <button id="toggle-phrase" class="ghost">Reveal</button>
+          <button id="copy-phrase" class="ghost">Copy</button>
+        </div>
+      </div>
+      <ol id="phrase" class="phrase concealed"></ol>
+      <p class="warn">Write these words down in order and keep them somewhere safe. They are the only backup of this wallet.</p>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <h3>Receive addresses</h3>
+        <label class="switch"><input type="checkbox" id="show-keys"><span>Show private keys</span></label>
+      </div>
+      <p class="hint">Give any of these to someone who wants to send you bitcoin. They all belong to this wallet.</p>
+      <div class="table-wrap"><table id="receive" class="keys"></table></div>
+      <details class="sub">
+        <summary>Change addresses</summary>
+        <p class="hint">Used automatically by wallet apps for change. You normally don't need these.</p>
+        <div class="table-wrap"><table id="change" class="keys"></table></div>
+      </details>
+    </div>
+
+    <div class="block">
+      <div class="block-head"><h3>Watch-only key</h3><button class="ghost" id="copy-xpub">Copy</button></div>
+      <p class="hint">Import this into a wallet app to watch your balance. It can't spend coins, but it does reveal all your addresses.</p>
+      <code id="xpub" class="mono long"></code>
+      <dl class="meta">
+        <div><dt>Derivation</dt><dd id="path" class="mono"></dd></div>
+        <div><dt>Address type</dt><dd>Native SegWit (BIP84, P2WPKH)</dd></div>
+        <div><dt>Network</dt><dd id="network-label"></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Compatible with standard wallets such as Sparrow, Electrum, BlueWallet and hardware wallets: restore the phrase there with "Native SegWit".</p>
+    <p>Built on the audited <a href="https://paulmillr.com/noble/" rel="noopener noreferrer">noble &amp; scure</a> cryptography libraries. Verified against the official BIP39 and BIP84 test vectors. No tracking, no cookies, no network requests.</p>
+  </footer>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>(()=>{var Be=typeof globalThis=="object"&&"crypto"in globalThis?globalThis.crypto:void 0;/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */function ke(e){return e instanceof Uint8Array||ArrayBuffer.isView(e)&&e.constructor.name==="Uint8Array"}function te(e){if(!Number.isSafeInteger(e)||e<0)throw new Error("positive integer expected, got "+e)}function N(e,...t){if(!ke(e))throw new Error("Uint8Array expected");if(t.length>0&&!t.includes(e.length))throw new Error("Uint8Array expected of length "+t+", got length="+e.length)}function Ce(e){if(typeof e!="function"||typeof e.create!="function")throw new Error("Hash should be wrapped by utils.createHasher");te(e.outputLen),te(e.blockLen)}function _e(e,t=!0){if(e.destroyed)throw new Error("Hash instance has been destroyed");if(t&&e.finished)throw new Error("Hash#digest() has already been called")}function br(e,t){N(e);let n=t.outputLen;if(e.length<n)throw new Error("digestInto() expects output buffer of length at least "+n)}function J(...e){for(let t=0;t<e.length;t++)e[t].fill(0)}function oe(e){return new DataView(e.buffer,e.byteOffset,e.byteLength)}function re(e,t){return e<<32-t|e>>>t}function je(e,t){return e<<t|e>>>32-t>>>0}var mr=typeof Uint8Array.from([]).toHex=="function"&&typeof Uint8Array.fromHex=="function",Nn=Array.from({length:256},(e,t)=>t.toString(16).padStart(2,"0"));function ne(e){if(N(e),mr)return e.toHex();let t="";for(let n=0;n<e.length;n++)t+=Nn[e[n]];return t}var ce={_0:48,_9:57,A:65,F:70,a:97,f:102};function pr(e){if(e>=ce._0&&e<=ce._9)return e-ce._0;if(e>=ce.A&&e<=ce.F)return e-(ce.A-10);if(e>=ce.a&&e<=ce.f)return e-(ce.a-10)}function le(e){if(typeof e!="string")throw new Error("hex string expected, got "+typeof e);if(mr)return Uint8Array.fromHex(e);let t=e.length,n=t/2;if(t%2)throw new Error("hex string expected, got unpadded hex of length "+t);let r=new Uint8Array(n);for(let o=0,i=0;o<n;o++,i+=2){let s=pr(e.charCodeAt(i)),a=pr(e.charCodeAt(i+1));if(s===void 0||a===void 0){let l=e[i]+e[i+1];throw new Error('hex string expected, got non-hex character "'+l+'" at index '+i)}r[o]=s*16+a}return r}function Ve(e){if(typeof e!="string")throw new Error("string expected");return new Uint8Array(new TextEncoder().encode(e))}function Me(e){return typeof e=="string"&&(e=Ve(e)),N(e),e}function Ht(e){return typeof e=="string"&&(e=Ve(e)),N(e),e}function Z(...e){let t=0;for(let r=0;r<e.length;r++){let o=e[r];N(o),t+=o.length}let n=new Uint8Array(t);for(let r=0,o=0;r<e.length;r++){let i=e[r];n.set(i,o),o+=i.length}return n}function yr(e,t){if(t!==void 0&&{}.toString.call(t)!=="[object Object]")throw new Error("options should be object or undefined");return Object.assign(e,t)}var Ue=class{};function ze(e){let t=r=>e().update(Me(r)).digest(),n=e();return t.outputLen=n.outputLen,t.blockLen=n.blockLen,t.create=()=>e(),t}function Te(e=32){if(Be&&typeof Be.getRandomValues=="function")return Be.getRandomValues(new Uint8Array(e));if(Be&&typeof Be.randomBytes=="function")return Uint8Array.from(Be.randomBytes(e));throw new Error("crypto.getRandomValues must be defined")}var nt=class extends Ue{constructor(t,n){super(),this.finished=!1,this.destroyed=!1,Ce(t);let r=Me(n);if(this.iHash=t.create(),typeof this.iHash.update!="function")throw new Error("Expected instance of class which extends utils.Hash");this.blockLen=this.iHash.blockLen,this.outputLen=this.iHash.outputLen;let o=this.blockLen,i=new Uint8Array(o);i.set(r.length>o?t.create().update(r).digest():r);for(let s=0;s<i.length;s++)i[s]^=54;this.iHash.update(i),this.oHash=t.create();for(let s=0;s<i.length;s++)i[s]^=106;this.oHash.update(i),J(i)}update(t){return _e(this),this.iHash.update(t),this}digestInto(t){_e(this),N(t,this.outputLen),this.finished=!0,this.iHash.digestInto(t),this.oHash.update(t),this.oHash.digestInto(t),this.destroy()}digest(){let t=new Uint8Array(this.oHash.outputLen);return this.digestInto(t),t}_cloneInto(t){t||(t=Object.create(Object.getPrototypeOf(this),{}));let{oHash:n,iHash:r,finished:o,destroyed:i,blockLen:s,outputLen:a}=this;return t=t,t.finished=o,t.destroyed=i,t.blockLen=s,t.outputLen=a,t.oHash=n._cloneInto(t.oHash),t.iHash=r._cloneInto(t.iHash),t}clone(){return this._cloneInto()}destroy(){this.destroyed=!0,this.oHash.destroy(),this.iHash.destroy()}},be=(e,t,n)=>new nt(e,t).update(n).digest();be.create=(e,t)=>new nt(e,t);function qn(e,t,n,r){Ce(e);let o=yr({dkLen:32,asyncTick:10},r),{c:i,dkLen:s,asyncTick:a}=o;if(te(i),te(s),te(a),i<1)throw new Error("iterations (c) should be >= 1");let l=Ht(t),u=Ht(n),b=new Uint8Array(s),d=be.create(e,l),c=d._cloneInto().update(u);return{c:i,dkLen:s,asyncTick:a,DK:b,PRF:d,PRFSalt:c}}function Dn(e,t,n,r,o){return e.destroy(),t.destroy(),r&&r.destroy(),J(o),n}function gr(e,t,n,r){let{c:o,dkLen:i,DK:s,PRF:a,PRFSalt:l}=qn(e,t,n,r),u,b=new Uint8Array(4),d=oe(b),c=new Uint8Array(a.outputLen);for(let f=1,y=0;y<i;f++,y+=a.outputLen){let g=s.subarray(y,y+a.outputLen);d.setInt32(0,f,!1),(u=l._cloneInto(u)).update(b).digestInto(c),g.set(c.subarray(0,g.length));for(let B=1;B<o;B++){a._cloneInto(u).update(c).digestInto(c);for(let L=0;L<g.length;L++)g[L]^=c[L]}}return Dn(a,l,s,u,c)}function jn(e,t,n,r){if(typeof e.setBigUint64=="function")return e.setBigUint64(t,n,r);let o=BigInt(32),i=BigInt(4294967295),s=Number(n>>o&i),a=Number(n&i),l=r?4:0,u=r?0:4;e.setUint32(t+l,s,r),e.setUint32(t+u,a,r)}function Lt(e,t,n){return e&t^~e&n}function Ut(e,t,n){return e&t^e&n^t&n}var Ae=class extends Ue{constructor(t,n,r,o){super(),this.finished=!1,this.length=0,this.pos=0,this.destroyed=!1,this.blockLen=t,this.outputLen=n,this.padOffset=r,this.isLE=o,this.buffer=new Uint8Array(t),this.view=oe(this.buffer)}update(t){_e(this),t=Me(t),N(t);let{view:n,buffer:r,blockLen:o}=this,i=t.length;for(let s=0;s<i;){let a=Math.min(o-this.pos,i-s);if(a===o){let l=oe(t);for(;o<=i-s;s+=o)this.process(l,s);continue}r.set(t.subarray(s,s+a),this.pos),this.pos+=a,s+=a,this.pos===o&&(this.process(n,0),this.pos=0)}return this.length+=t.length,this.roundClean(),this}digestInto(t){_e(this),br(t,this),this.finished=!0;let{buffer:n,view:r,blockLen:o,isLE:i}=this,{pos:s}=this;n[s++]=128,J(this.buffer.subarray(s)),this.padOffset>o-s&&(this.process(r,0),s=0);for(let d=s;d<o;d++)n[d]=0;jn(r,o-8,BigInt(this.length*8),i),this.process(r,0);let a=oe(t),l=this.outputLen;if(l%4)throw new Error("_sha2: outputLen should be aligned to 32bit");let u=l/4,b=this.get();if(u>b.length)throw new Error("_sha2: outputLen bigger than state");for(let d=0;d<u;d++)a.setUint32(4*d,b[d],i)}digest(){let{buffer:t,outputLen:n}=this;this.digestInto(t);let r=t.slice(0,n);return this.destroy(),r}_cloneInto(t){t||(t=new this.constructor),t.set(...this.get());let{blockLen:n,buffer:r,length:o,finished:i,destroyed:s,pos:a}=this;return t.destroyed=s,t.finished=i,t.length=o,t.pos=a,o%n&&t.buffer.set(r),t}clone(){return this._cloneInto()}},fe=Uint32Array.from([1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225]);var V=Uint32Array.from([1779033703,4089235720,3144134277,2227873595,1013904242,4271175723,2773480762,1595750129,1359893119,2917565137,2600822924,725511199,528734635,4215389547,1541459225,327033209]);var ot=BigInt(4294967295),wr=BigInt(32);function Vn(e,t=!1){return t?{h:Number(e&ot),l:Number(e>>wr&ot)}:{h:Number(e>>wr&ot)|0,l:Number(e&ot)|0}}function xr(e,t=!1){let n=e.length,r=new Uint32Array(n),o=new Uint32Array(n);for(let i=0;i<n;i++){let{h:s,l:a}=Vn(e[i],t);[r[i],o[i]]=[s,a]}return[r,o]}var Ct=(e,t,n)=>e>>>n,_t=(e,t,n)=>e<<32-n|t>>>n,Se=(e,t,n)=>e>>>n|t<<32-n,Ie=(e,t,n)=>e<<32-n|t>>>n,$e=(e,t,n)=>e<<64-n|t>>>n-32,Ze=(e,t,n)=>e>>>n-32|t<<64-n;function ie(e,t,n,r){let o=(t>>>0)+(r>>>0);return{h:e+n+(o/2**32|0)|0,l:o|0}}var vr=(e,t,n)=>(e>>>0)+(t>>>0)+(n>>>0),Er=(e,t,n,r)=>t+n+r+(e/2**32|0)|0,Br=(e,t,n,r)=>(e>>>0)+(t>>>0)+(n>>>0)+(r>>>0),kr=(e,t,n,r,o)=>t+n+r+o+(e/2**32|0)|0,Ar=(e,t,n,r,o)=>(e>>>0)+(t>>>0)+(n>>>0)+(r>>>0)+(o>>>0),Sr=(e,t,n,r,o,i)=>t+n+r+o+i+(e/2**32|0)|0;var zn=Uint32Array.from([1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298]),me=new Uint32Array(64),it=class extends Ae{constructor(t=32){super(64,t,8,!1),this.A=fe[0]|0,this.B=fe[1]|0,this.C=fe[2]|0,this.D=fe[3]|0,this.E=fe[4]|0,this.F=fe[5]|0,this.G=fe[6]|0,this.H=fe[7]|0}get(){let{A:t,B:n,C:r,D:o,E:i,F:s,G:a,H:l}=this;return[t,n,r,o,i,s,a,l]}set(t,n,r,o,i,s,a,l){this.A=t|0,this.B=n|0,this.C=r|0,this.D=o|0,this.E=i|0,this.F=s|0,this.G=a|0,this.H=l|0}process(t,n){for(let d=0;d<16;d++,n+=4)me[d]=t.getUint32(n,!1);for(let d=16;d<64;d++){let c=me[d-15],f=me[d-2],y=re(c,7)^re(c,18)^c>>>3,g=re(f,17)^re(f,19)^f>>>10;me[d]=g+me[d-7]+y+me[d-16]|0}let{A:r,B:o,C:i,D:s,E:a,F:l,G:u,H:b}=this;for(let d=0;d<64;d++){let c=re(a,6)^re(a,11)^re(a,25),f=b+c+Lt(a,l,u)+zn[d]+me[d]|0,g=(re(r,2)^re(r,13)^re(r,22))+Ut(r,o,i)|0;b=u,u=l,l=a,a=s+f|0,s=i,i=o,o=r,r=f+g|0}r=r+this.A|0,o=o+this.B|0,i=i+this.C|0,s=s+this.D|0,a=a+this.E|0,l=l+this.F|0,u=u+this.G|0,b=b+this.H|0,this.set(r,o,i,s,a,l,u,b)}roundClean(){J(me)}destroy(){this.set(0,0,0,0,0,0,0,0),J(this.buffer)}};var Ir=xr(["0x428a2f98d728ae22","0x7137449123ef65cd","0xb5c0fbcfec4d3b2f","0xe9b5dba58189dbbc","0x3956c25bf348b538","0x59f111f1b605d019","0x923f82a4af194f9b","0xab1c5ed5da6d8118","0xd807aa98a3030242","0x12835b0145706fbe","0x243185be4ee4b28c","0x550c7dc3d5ffb4e2","0x72be5d74f27b896f","0x80deb1fe3b1696b1","0x9bdc06a725c71235","0xc19bf174cf692694","0xe49b69c19ef14ad2","0xefbe4786384f25e3","0x0fc19dc68b8cd5b5","0x240ca1cc77ac9c65","0x2de92c6f592b0275","0x4a7484aa6ea6e483","0x5cb0a9dcbd41fbd4","0x76f988da831153b5","0x983e5152ee66dfab","0xa831c66d2db43210","0xb00327c898fb213f","0xbf597fc7beef0ee4","0xc6e00bf33da88fc2","0xd5a79147930aa725","0x06ca6351e003826f","0x142929670a0e6e70","0x27b70a8546d22ffc","0x2e1b21385c26c926","0x4d2c6dfc5ac42aed","0x53380d139d95b3df","0x650a73548baf63de","0x766a0abb3c77b2a8","0x81c2c92e47edaee6","0x92722c851482353b","0xa2bfe8a14cf10364","0xa81a664bbc423001","0xc24b8b70d0f89791","0xc76c51a30654be30","0xd192e819d6ef5218","0xd69906245565a910","0xf40e35855771202a","0x106aa07032bbd1b8","0x19a4c116b8d2d0c8","0x1e376c085141ab53","0x2748774cdf8eeb99","0x34b0bcb5e19b48a8","0x391c0cb3c5c95a63","0x4ed8aa4ae3418acb","0x5b9cca4f7763e373","0x682e6ff3d6b2b8a3","0x748f82ee5defb2fc","0x78a5636f43172f60","0x84c87814a1f0ab72","0x8cc702081a6439ec","0x90befffa23631e28","0xa4506cebde82bde9","0xbef9a3f7b2c67915","0xc67178f2e372532b","0xca273eceea26619c","0xd186b8c721c0c207","0xeada7dd6cde0eb1e","0xf57d4f7fee6ed178","0x06f067aa72176fba","0x0a637dc5a2c898a6","0x113f9804bef90dae","0x1b710b35131c471b","0x28db77f523047d84","0x32caab7b40c72493","0x3c9ebe0a15c9bebc","0x431d67c49c100d4c","0x4cc5d4becb3e42b6","0x597f299cfc657e2a","0x5fcb6fab3ad6faec","0x6c44198c4a475817"].map(e=>BigInt(e))),$n=Ir[0],Zn=Ir[1],ye=new Uint32Array(80),ge=new Uint32Array(80),Tt=class extends Ae{constructor(t=64){super(128,t,16,!1),this.Ah=V[0]|0,this.Al=V[1]|0,this.Bh=V[2]|0,this.Bl=V[3]|0,this.Ch=V[4]|0,this.Cl=V[5]|0,this.Dh=V[6]|0,this.Dl=V[7]|0,this.Eh=V[8]|0,this.El=V[9]|0,this.Fh=V[10]|0,this.Fl=V[11]|0,this.Gh=V[12]|0,this.Gl=V[13]|0,this.Hh=V[14]|0,this.Hl=V[15]|0}get(){let{Ah:t,Al:n,Bh:r,Bl:o,Ch:i,Cl:s,Dh:a,Dl:l,Eh:u,El:b,Fh:d,Fl:c,Gh:f,Gl:y,Hh:g,Hl:B}=this;return[t,n,r,o,i,s,a,l,u,b,d,c,f,y,g,B]}set(t,n,r,o,i,s,a,l,u,b,d,c,f,y,g,B){this.Ah=t|0,this.Al=n|0,this.Bh=r|0,this.Bl=o|0,this.Ch=i|0,this.Cl=s|0,this.Dh=a|0,this.Dl=l|0,this.Eh=u|0,this.El=b|0,this.Fh=d|0,this.Fl=c|0,this.Gh=f|0,this.Gl=y|0,this.Hh=g|0,this.Hl=B|0}process(t,n){for(let E=0;E<16;E++,n+=4)ye[E]=t.getUint32(n),ge[E]=t.getUint32(n+=4);for(let E=16;E<80;E++){let j=ye[E-15]|0,T=ge[E-15]|0,Y=Se(j,T,1)^Se(j,T,8)^Ct(j,T,7),pe=Ie(j,T,1)^Ie(j,T,8)^_t(j,T,7),z=ye[E-2]|0,I=ge[E-2]|0,ae=Se(z,I,19)^$e(z,I,61)^Ct(z,I,6),ee=Ie(z,I,19)^Ze(z,I,61)^_t(z,I,6),C=Br(pe,ee,ge[E-7],ge[E-16]),m=kr(C,Y,ae,ye[E-7],ye[E-16]);ye[E]=m|0,ge[E]=C|0}let{Ah:r,Al:o,Bh:i,Bl:s,Ch:a,Cl:l,Dh:u,Dl:b,Eh:d,El:c,Fh:f,Fl:y,Gh:g,Gl:B,Hh:L,Hl:M}=this;for(let E=0;E<80;E++){let j=Se(d,c,14)^Se(d,c,18)^$e(d,c,41),T=Ie(d,c,14)^Ie(d,c,18)^Ze(d,c,41),Y=d&f^~d&g,pe=c&y^~c&B,z=Ar(M,T,pe,Zn[E],ge[E]),I=Sr(z,L,j,Y,$n[E],ye[E]),ae=z|0,ee=Se(r,o,28)^$e(r,o,34)^$e(r,o,39),C=Ie(r,o,28)^Ze(r,o,34)^Ze(r,o,39),m=r&i^r&a^i&a,p=o&s^o&l^s&l;L=g|0,M=B|0,g=f|0,B=y|0,f=d|0,y=c|0,{h:d,l:c}=ie(u|0,b|0,I|0,ae|0),u=a|0,b=l|0,a=i|0,l=s|0,i=r|0,s=o|0;let h=vr(ae,C,p);r=Er(h,I,ee,m),o=h|0}({h:r,l:o}=ie(this.Ah|0,this.Al|0,r|0,o|0)),{h:i,l:s}=ie(this.Bh|0,this.Bl|0,i|0,s|0),{h:a,l}=ie(this.Ch|0,this.Cl|0,a|0,l|0),{h:u,l:b}=ie(this.Dh|0,this.Dl|0,u|0,b|0),{h:d,l:c}=ie(this.Eh|0,this.El|0,d|0,c|0),{h:f,l:y}=ie(this.Fh|0,this.Fl|0,f|0,y|0),{h:g,l:B}=ie(this.Gh|0,this.Gl|0,g|0,B|0),{h:L,l:M}=ie(this.Hh|0,this.Hl|0,L|0,M|0),this.set(r,o,i,s,a,l,u,b,d,c,f,y,g,B,L,M)}roundClean(){J(ye,ge)}destroy(){J(this.buffer),this.set(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)}};var ue=ze(()=>new it);var Pe=ze(()=>new Tt);/*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */function We(e){return e instanceof Uint8Array||ArrayBuffer.isView(e)&&e.constructor.name==="Uint8Array"}function Cr(e,t){return Array.isArray(t)?t.length===0?!0:e?t.every(n=>typeof n=="string"):t.every(n=>Number.isSafeInteger(n)):!1}function _r(e){if(typeof e!="function")throw new Error("function expected");return!0}function Re(e,t){if(typeof t!="string")throw new Error(`${e}: string expected`);return!0}function Ke(e){if(!Number.isSafeInteger(e))throw new Error(`invalid integer: ${e}`)}function at(e){if(!Array.isArray(e))throw new Error("array expected")}function ct(e,t){if(!Cr(!0,t))throw new Error(`${e}: array of strings expected`)}function Ot(e,t){if(!Cr(!1,t))throw new Error(`${e}: array of numbers expected`)}function ut(...e){let t=i=>i,n=(i,s)=>a=>i(s(a)),r=e.map(i=>i.encode).reduceRight(n,t),o=e.map(i=>i.decode).reduce(n,t);return{encode:r,decode:o}}function Nt(e){let t=typeof e=="string"?e.split(""):e,n=t.length;ct("alphabet",t);let r=new Map(t.map((o,i)=>[o,i]));return{encode:o=>(at(o),o.map(i=>{if(!Number.isSafeInteger(i)||i<0||i>=n)throw new Error(`alphabet.encode: digit index outside alphabet "${i}". Allowed: ${e}`);return t[i]})),decode:o=>(at(o),o.map(i=>{Re("alphabet.decode",i);let s=r.get(i);if(s===void 0)throw new Error(`Unknown letter: "${i}". Allowed: ${e}`);return s}))}}function qt(e=""){return Re("join",e),{encode:t=>(ct("join.decode",t),t.join(e)),decode:t=>(Re("join.decode",t),t.split(e))}}function Pn(e,t="="){return Ke(e),Re("padding",t),{encode(n){for(ct("padding.encode",n);n.length*e%8;)n.push(t);return n},decode(n){ct("padding.decode",n);let r=n.length;if(r*e%8)throw new Error("padding: invalid, string should have whole number of bytes");for(;r>0&&n[r-1]===t;r--)if((r-1)*e%8===0)throw new Error("padding: invalid, string has too much padding");return n.slice(0,r)}}}function Rt(e,t,n){if(t<2)throw new Error(`convertRadix: invalid from=${t}, base cannot be less than 2`);if(n<2)throw new Error(`convertRadix: invalid to=${n}, base cannot be less than 2`);if(at(e),!e.length)return[];let r=0,o=[],i=Array.from(e,a=>{if(Ke(a),a<0||a>=t)throw new Error(`invalid integer: ${a}`);return a}),s=i.length;for(;;){let a=0,l=!0;for(let u=r;u<s;u++){let b=i[u],d=t*a,c=d+b;if(!Number.isSafeInteger(c)||d/t!==a||c-b!==d)throw new Error("convertRadix: carry overflow");let f=c/n;a=c%n;let y=Math.floor(f);if(i[u]=y,!Number.isSafeInteger(y)||y*n+a!==c)throw new Error("convertRadix: carry overflow");if(l)y?l=!1:r=u;else continue}if(o.push(a),l)break}for(let a=0;a<e.length-1&&e[a]===0;a++)o.push(0);return o.reverse()}var Tr=(e,t)=>t===0?e:Tr(t,e%t),lt=(e,t)=>e+(t-Tr(e,t)),st=(()=>{let e=[];for(let t=0;t<40;t++)e.push(2**t);return e})();function ft(e,t,n,r){if(at(e),t<=0||t>32)throw new Error(`convertRadix2: wrong from=${t}`);if(n<=0||n>32)throw new Error(`convertRadix2: wrong to=${n}`);if(lt(t,n)>32)throw new Error(`convertRadix2: carry overflow from=${t} to=${n} carryBits=${lt(t,n)}`);let o=0,i=0,s=st[t],a=st[n]-1,l=[];for(let u of e){if(Ke(u),u>=s)throw new Error(`convertRadix2: invalid data word=${u} from=${t}`);if(o=o<<t|u,i+t>32)throw new Error(`convertRadix2: carry overflow pos=${i} from=${t}`);for(i+=t;i>=n;i-=n)l.push((o>>i-n&a)>>>0);let b=st[i];if(b===void 0)throw new Error("invalid carry");o&=b-1}if(o=o<<n-i&a,!r&&i>=t)throw new Error("Excess padding");if(!r&&o>0)throw new Error(`Non-zero padding: ${o}`);return r&&i>0&&l.push(o>>>0),l}function Rr(e){Ke(e);let t=2**8;return{encode:n=>{if(!We(n))throw new Error("radix.encode input should be Uint8Array");return Rt(Array.from(n),t,e)},decode:n=>(Ot("radix.decode",n),Uint8Array.from(Rt(n,e,t)))}}function Kr(e,t=!1){if(Ke(e),e<=0||e>32)throw new Error("radix2: bits should be in (0..32]");if(lt(8,e)>32||lt(e,8)>32)throw new Error("radix2: carry overflow");return{encode:n=>{if(!We(n))throw new Error("radix2.encode input should be Uint8Array");return ft(Array.from(n),8,e,!t)},decode:n=>(Ot("radix2.decode",n),Uint8Array.from(ft(n,e,8,t)))}}function Hr(e){return _r(e),function(...t){try{return e.apply(null,t)}catch{}}}function Or(e,t){return Ke(e),_r(t),{encode(n){if(!We(n))throw new Error("checksum.encode: input should be Uint8Array");let r=t(n).slice(0,e),o=new Uint8Array(n.length+e);return o.set(n),o.set(r,n.length),o},decode(n){if(!We(n))throw new Error("checksum.decode: input should be Uint8Array");let r=n.slice(0,-e),o=n.slice(-e),i=t(r).slice(0,e);for(let s=0;s<e;s++)if(i[s]!==o[s])throw new Error("Invalid checksum");return r}}}var Ye={alphabet:Nt,chain:ut,checksum:Or,convertRadix:Rt,convertRadix2:ft,radix:Rr,radix2:Kr,join:qt,padding:Pn};var Gn=e=>ut(Rr(58),Nt(e),qt("")),Wn=Gn("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");var dt=e=>ut(Or(4,t=>e(e(t))),Wn);var Kt=ut(Nt("qpzry9x8gf2tvdw0s3jn54khce6mua7l"),qt("")),Lr=[996825010,642813549,513874426,1027748829,705979059];function Ge(e){let t=e>>25,n=(e&33554431)<<5;for(let r=0;r<Lr.length;r++)(t>>r&1)===1&&(n^=Lr[r]);return n}function Ur(e,t,n=1){let r=e.length,o=1;for(let i=0;i<r;i++){let s=e.charCodeAt(i);if(s<33||s>126)throw new Error(`Invalid prefix (${e})`);o=Ge(o)^s>>5}o=Ge(o);for(let i=0;i<r;i++)o=Ge(o)^e.charCodeAt(i)&31;for(let i of t)o=Ge(o)^i;for(let i=0;i<6;i++)o=Ge(o);return o^=n,Kt.encode(ft([o%st[30]],30,5,!1))}function Yn(e){let t=e==="bech32"?1:734539939,n=Kr(5),r=n.decode,o=n.encode,i=Hr(r);function s(d,c,f=90){Re("bech32.encode prefix",d),We(c)&&(c=Array.from(c)),Ot("bech32.encode",c);let y=d.length;if(y===0)throw new TypeError(`Invalid prefix length ${y}`);let g=y+7+c.length;if(f!==!1&&g>f)throw new TypeError(`Length ${g} exceeds limit ${f}`);let B=d.toLowerCase(),L=Ur(B,c,t);return`${B}1${Kt.encode(c)}${L}`}function a(d,c=90){Re("bech32.decode input",d);let f=d.length;if(f<8||c!==!1&&f>c)throw new TypeError(`invalid string length: ${f} (${d}). Expected (8..${c})`);let y=d.toLowerCase();if(d!==y&&d!==d.toUpperCase())throw new Error("String must be lowercase or uppercase");let g=y.lastIndexOf("1");if(g===0||g===-1)throw new Error('Letter "1" must be present between prefix and data only');let B=y.slice(0,g),L=y.slice(g+1);if(L.length<6)throw new Error("Data must be at least 6 characters long");let M=Kt.decode(L).slice(0,-6),E=Ur(B,M,t);if(!L.endsWith(E))throw new Error(`Invalid checksum in ${d}: expected "${E}"`);return{prefix:B,words:M}}let l=Hr(a);function u(d){let{prefix:c,words:f}=a(d,!1);return{prefix:c,words:f,bytes:r(f)}}function b(d,c){return s(d,o(c))}return{encode:s,decode:a,encodeFromBytes:b,decodeToBytes:u,decodeUnsafe:l,fromWords:r,fromWordsUnsafe:i,toWords:o}}var Dt=Yn("bech32");/*! scure-bip39 - MIT License (c) 2022 Patricio Palladino, Paul Miller (paulmillr.com) */var Xn=e=>e[0]==="\u3042\u3044\u3053\u304F\u3057\u3093";function Nr(e){if(typeof e!="string")throw new TypeError("invalid mnemonic type: "+typeof e);return e.normalize("NFKD")}function qr(e){let t=Nr(e),n=t.split(" ");if(![12,15,18,21,24].includes(n.length))throw new Error("Invalid mnemonic");return{nfkd:t,words:n}}function Dr(e){N(e,16,20,24,28,32)}function jr(e,t=128){if(te(t),t%32!==0||t>256)throw new TypeError("Invalid entropy");return Fn(Te(t/8),e)}var Jn=e=>{let t=8-e.length/4;return new Uint8Array([ue(e)[0]>>t<<t])};function Vr(e){if(!Array.isArray(e)||e.length!==2048||typeof e[0]!="string")throw new Error("Wordlist: expected array of 2048 strings");return e.forEach(t=>{if(typeof t!="string")throw new Error("wordlist: non-string element: "+t)}),Ye.chain(Ye.checksum(1,Jn),Ye.radix2(11,!0),Ye.alphabet(e))}function Qn(e,t){let{words:n}=qr(e),r=Vr(t).decode(n);return Dr(r),r}function Fn(e,t){return Dr(e),Vr(t).encode(e).join(Xn(t)?"\u3000":" ")}function Mr(e,t){try{Qn(e,t)}catch{return!1}return!0}var eo=e=>Nr("mnemonic"+e);function zr(e,t=""){return gr(Pe,qr(e).nfkd,eo(t),{c:2048,dkLen:64})}var ht=`abandon
+ability
+able
+about
+above
+absent
+absorb
+abstract
+absurd
+abuse
+access
+accident
+account
+accuse
+achieve
+acid
+acoustic
+acquire
+across
+act
+action
+actor
+actress
+actual
+adapt
+add
+addict
+address
+adjust
+admit
+adult
+advance
+advice
+aerobic
+affair
+afford
+afraid
+again
+age
+agent
+agree
+ahead
+aim
+air
+airport
+aisle
+alarm
+album
+alcohol
+alert
+alien
+all
+alley
+allow
+almost
+alone
+alpha
+already
+also
+alter
+always
+amateur
+amazing
+among
+amount
+amused
+analyst
+anchor
+ancient
+anger
+angle
+angry
+animal
+ankle
+announce
+annual
+another
+answer
+antenna
+antique
+anxiety
+any
+apart
+apology
+appear
+apple
+approve
+april
+arch
+arctic
+area
+arena
+argue
+arm
+armed
+armor
+army
+around
+arrange
+arrest
+arrive
+arrow
+art
+artefact
+artist
+artwork
+ask
+aspect
+assault
+asset
+assist
+assume
+asthma
+athlete
+atom
+attack
+attend
+attitude
+attract
+auction
+audit
+august
+aunt
+author
+auto
+autumn
+average
+avocado
+avoid
+awake
+aware
+away
+awesome
+awful
+awkward
+axis
+baby
+bachelor
+bacon
+badge
+bag
+balance
+balcony
+ball
+bamboo
+banana
+banner
+bar
+barely
+bargain
+barrel
+base
+basic
+basket
+battle
+beach
+bean
+beauty
+because
+become
+beef
+before
+begin
+behave
+behind
+believe
+below
+belt
+bench
+benefit
+best
+betray
+better
+between
+beyond
+bicycle
+bid
+bike
+bind
+biology
+bird
+birth
+bitter
+black
+blade
+blame
+blanket
+blast
+bleak
+bless
+blind
+blood
+blossom
+blouse
+blue
+blur
+blush
+board
+boat
+body
+boil
+bomb
+bone
+bonus
+book
+boost
+border
+boring
+borrow
+boss
+bottom
+bounce
+box
+boy
+bracket
+brain
+brand
+brass
+brave
+bread
+breeze
+brick
+bridge
+brief
+bright
+bring
+brisk
+broccoli
+broken
+bronze
+broom
+brother
+brown
+brush
+bubble
+buddy
+budget
+buffalo
+build
+bulb
+bulk
+bullet
+bundle
+bunker
+burden
+burger
+burst
+bus
+business
+busy
+butter
+buyer
+buzz
+cabbage
+cabin
+cable
+cactus
+cage
+cake
+call
+calm
+camera
+camp
+can
+canal
+cancel
+candy
+cannon
+canoe
+canvas
+canyon
+capable
+capital
+captain
+car
+carbon
+card
+cargo
+carpet
+carry
+cart
+case
+cash
+casino
+castle
+casual
+cat
+catalog
+catch
+category
+cattle
+caught
+cause
+caution
+cave
+ceiling
+celery
+cement
+census
+century
+cereal
+certain
+chair
+chalk
+champion
+change
+chaos
+chapter
+charge
+chase
+chat
+cheap
+check
+cheese
+chef
+cherry
+chest
+chicken
+chief
+child
+chimney
+choice
+choose
+chronic
+chuckle
+chunk
+churn
+cigar
+cinnamon
+circle
+citizen
+city
+civil
+claim
+clap
+clarify
+claw
+clay
+clean
+clerk
+clever
+click
+client
+cliff
+climb
+clinic
+clip
+clock
+clog
+close
+cloth
+cloud
+clown
+club
+clump
+cluster
+clutch
+coach
+coast
+coconut
+code
+coffee
+coil
+coin
+collect
+color
+column
+combine
+come
+comfort
+comic
+common
+company
+concert
+conduct
+confirm
+congress
+connect
+consider
+control
+convince
+cook
+cool
+copper
+copy
+coral
+core
+corn
+correct
+cost
+cotton
+couch
+country
+couple
+course
+cousin
+cover
+coyote
+crack
+cradle
+craft
+cram
+crane
+crash
+crater
+crawl
+crazy
+cream
+credit
+creek
+crew
+cricket
+crime
+crisp
+critic
+crop
+cross
+crouch
+crowd
+crucial
+cruel
+cruise
+crumble
+crunch
+crush
+cry
+crystal
+cube
+culture
+cup
+cupboard
+curious
+current
+curtain
+curve
+cushion
+custom
+cute
+cycle
+dad
+damage
+damp
+dance
+danger
+daring
+dash
+daughter
+dawn
+day
+deal
+debate
+debris
+decade
+december
+decide
+decline
+decorate
+decrease
+deer
+defense
+define
+defy
+degree
+delay
+deliver
+demand
+demise
+denial
+dentist
+deny
+depart
+depend
+deposit
+depth
+deputy
+derive
+describe
+desert
+design
+desk
+despair
+destroy
+detail
+detect
+develop
+device
+devote
+diagram
+dial
+diamond
+diary
+dice
+diesel
+diet
+differ
+digital
+dignity
+dilemma
+dinner
+dinosaur
+direct
+dirt
+disagree
+discover
+disease
+dish
+dismiss
+disorder
+display
+distance
+divert
+divide
+divorce
+dizzy
+doctor
+document
+dog
+doll
+dolphin
+domain
+donate
+donkey
+donor
+door
+dose
+double
+dove
+draft
+dragon
+drama
+drastic
+draw
+dream
+dress
+drift
+drill
+drink
+drip
+drive
+drop
+drum
+dry
+duck
+dumb
+dune
+during
+dust
+dutch
+duty
+dwarf
+dynamic
+eager
+eagle
+early
+earn
+earth
+easily
+east
+easy
+echo
+ecology
+economy
+edge
+edit
+educate
+effort
+egg
+eight
+either
+elbow
+elder
+electric
+elegant
+element
+elephant
+elevator
+elite
+else
+embark
+embody
+embrace
+emerge
+emotion
+employ
+empower
+empty
+enable
+enact
+end
+endless
+endorse
+enemy
+energy
+enforce
+engage
+engine
+enhance
+enjoy
+enlist
+enough
+enrich
+enroll
+ensure
+enter
+entire
+entry
+envelope
+episode
+equal
+equip
+era
+erase
+erode
+erosion
+error
+erupt
+escape
+essay
+essence
+estate
+eternal
+ethics
+evidence
+evil
+evoke
+evolve
+exact
+example
+excess
+exchange
+excite
+exclude
+excuse
+execute
+exercise
+exhaust
+exhibit
+exile
+exist
+exit
+exotic
+expand
+expect
+expire
+explain
+expose
+express
+extend
+extra
+eye
+eyebrow
+fabric
+face
+faculty
+fade
+faint
+faith
+fall
+false
+fame
+family
+famous
+fan
+fancy
+fantasy
+farm
+fashion
+fat
+fatal
+father
+fatigue
+fault
+favorite
+feature
+february
+federal
+fee
+feed
+feel
+female
+fence
+festival
+fetch
+fever
+few
+fiber
+fiction
+field
+figure
+file
+film
+filter
+final
+find
+fine
+finger
+finish
+fire
+firm
+first
+fiscal
+fish
+fit
+fitness
+fix
+flag
+flame
+flash
+flat
+flavor
+flee
+flight
+flip
+float
+flock
+floor
+flower
+fluid
+flush
+fly
+foam
+focus
+fog
+foil
+fold
+follow
+food
+foot
+force
+forest
+forget
+fork
+fortune
+forum
+forward
+fossil
+foster
+found
+fox
+fragile
+frame
+frequent
+fresh
+friend
+fringe
+frog
+front
+frost
+frown
+frozen
+fruit
+fuel
+fun
+funny
+furnace
+fury
+future
+gadget
+gain
+galaxy
+gallery
+game
+gap
+garage
+garbage
+garden
+garlic
+garment
+gas
+gasp
+gate
+gather
+gauge
+gaze
+general
+genius
+genre
+gentle
+genuine
+gesture
+ghost
+giant
+gift
+giggle
+ginger
+giraffe
+girl
+give
+glad
+glance
+glare
+glass
+glide
+glimpse
+globe
+gloom
+glory
+glove
+glow
+glue
+goat
+goddess
+gold
+good
+goose
+gorilla
+gospel
+gossip
+govern
+gown
+grab
+grace
+grain
+grant
+grape
+grass
+gravity
+great
+green
+grid
+grief
+grit
+grocery
+group
+grow
+grunt
+guard
+guess
+guide
+guilt
+guitar
+gun
+gym
+habit
+hair
+half
+hammer
+hamster
+hand
+happy
+harbor
+hard
+harsh
+harvest
+hat
+have
+hawk
+hazard
+head
+health
+heart
+heavy
+hedgehog
+height
+hello
+helmet
+help
+hen
+hero
+hidden
+high
+hill
+hint
+hip
+hire
+history
+hobby
+hockey
+hold
+hole
+holiday
+hollow
+home
+honey
+hood
+hope
+horn
+horror
+horse
+hospital
+host
+hotel
+hour
+hover
+hub
+huge
+human
+humble
+humor
+hundred
+hungry
+hunt
+hurdle
+hurry
+hurt
+husband
+hybrid
+ice
+icon
+idea
+identify
+idle
+ignore
+ill
+illegal
+illness
+image
+imitate
+immense
+immune
+impact
+impose
+improve
+impulse
+inch
+include
+income
+increase
+index
+indicate
+indoor
+industry
+infant
+inflict
+inform
+inhale
+inherit
+initial
+inject
+injury
+inmate
+inner
+innocent
+input
+inquiry
+insane
+insect
+inside
+inspire
+install
+intact
+interest
+into
+invest
+invite
+involve
+iron
+island
+isolate
+issue
+item
+ivory
+jacket
+jaguar
+jar
+jazz
+jealous
+jeans
+jelly
+jewel
+job
+join
+joke
+journey
+joy
+judge
+juice
+jump
+jungle
+junior
+junk
+just
+kangaroo
+keen
+keep
+ketchup
+key
+kick
+kid
+kidney
+kind
+kingdom
+kiss
+kit
+kitchen
+kite
+kitten
+kiwi
+knee
+knife
+knock
+know
+lab
+label
+labor
+ladder
+lady
+lake
+lamp
+language
+laptop
+large
+later
+latin
+laugh
+laundry
+lava
+law
+lawn
+lawsuit
+layer
+lazy
+leader
+leaf
+learn
+leave
+lecture
+left
+leg
+legal
+legend
+leisure
+lemon
+lend
+length
+lens
+leopard
+lesson
+letter
+level
+liar
+liberty
+library
+license
+life
+lift
+light
+like
+limb
+limit
+link
+lion
+liquid
+list
+little
+live
+lizard
+load
+loan
+lobster
+local
+lock
+logic
+lonely
+long
+loop
+lottery
+loud
+lounge
+love
+loyal
+lucky
+luggage
+lumber
+lunar
+lunch
+luxury
+lyrics
+machine
+mad
+magic
+magnet
+maid
+mail
+main
+major
+make
+mammal
+man
+manage
+mandate
+mango
+mansion
+manual
+maple
+marble
+march
+margin
+marine
+market
+marriage
+mask
+mass
+master
+match
+material
+math
+matrix
+matter
+maximum
+maze
+meadow
+mean
+measure
+meat
+mechanic
+medal
+media
+melody
+melt
+member
+memory
+mention
+menu
+mercy
+merge
+merit
+merry
+mesh
+message
+metal
+method
+middle
+midnight
+milk
+million
+mimic
+mind
+minimum
+minor
+minute
+miracle
+mirror
+misery
+miss
+mistake
+mix
+mixed
+mixture
+mobile
+model
+modify
+mom
+moment
+monitor
+monkey
+monster
+month
+moon
+moral
+more
+morning
+mosquito
+mother
+motion
+motor
+mountain
+mouse
+move
+movie
+much
+muffin
+mule
+multiply
+muscle
+museum
+mushroom
+music
+must
+mutual
+myself
+mystery
+myth
+naive
+name
+napkin
+narrow
+nasty
+nation
+nature
+near
+neck
+need
+negative
+neglect
+neither
+nephew
+nerve
+nest
+net
+network
+neutral
+never
+news
+next
+nice
+night
+noble
+noise
+nominee
+noodle
+normal
+north
+nose
+notable
+note
+nothing
+notice
+novel
+now
+nuclear
+number
+nurse
+nut
+oak
+obey
+object
+oblige
+obscure
+observe
+obtain
+obvious
+occur
+ocean
+october
+odor
+off
+offer
+office
+often
+oil
+okay
+old
+olive
+olympic
+omit
+once
+one
+onion
+online
+only
+open
+opera
+opinion
+oppose
+option
+orange
+orbit
+orchard
+order
+ordinary
+organ
+orient
+original
+orphan
+ostrich
+other
+outdoor
+outer
+output
+outside
+oval
+oven
+over
+own
+owner
+oxygen
+oyster
+ozone
+pact
+paddle
+page
+pair
+palace
+palm
+panda
+panel
+panic
+panther
+paper
+parade
+parent
+park
+parrot
+party
+pass
+patch
+path
+patient
+patrol
+pattern
+pause
+pave
+payment
+peace
+peanut
+pear
+peasant
+pelican
+pen
+penalty
+pencil
+people
+pepper
+perfect
+permit
+person
+pet
+phone
+photo
+phrase
+physical
+piano
+picnic
+picture
+piece
+pig
+pigeon
+pill
+pilot
+pink
+pioneer
+pipe
+pistol
+pitch
+pizza
+place
+planet
+plastic
+plate
+play
+please
+pledge
+pluck
+plug
+plunge
+poem
+poet
+point
+polar
+pole
+police
+pond
+pony
+pool
+popular
+portion
+position
+possible
+post
+potato
+pottery
+poverty
+powder
+power
+practice
+praise
+predict
+prefer
+prepare
+present
+pretty
+prevent
+price
+pride
+primary
+print
+priority
+prison
+private
+prize
+problem
+process
+produce
+profit
+program
+project
+promote
+proof
+property
+prosper
+protect
+proud
+provide
+public
+pudding
+pull
+pulp
+pulse
+pumpkin
+punch
+pupil
+puppy
+purchase
+purity
+purpose
+purse
+push
+put
+puzzle
+pyramid
+quality
+quantum
+quarter
+question
+quick
+quit
+quiz
+quote
+rabbit
+raccoon
+race
+rack
+radar
+radio
+rail
+rain
+raise
+rally
+ramp
+ranch
+random
+range
+rapid
+rare
+rate
+rather
+raven
+raw
+razor
+ready
+real
+reason
+rebel
+rebuild
+recall
+receive
+recipe
+record
+recycle
+reduce
+reflect
+reform
+refuse
+region
+regret
+regular
+reject
+relax
+release
+relief
+rely
+remain
+remember
+remind
+remove
+render
+renew
+rent
+reopen
+repair
+repeat
+replace
+report
+require
+rescue
+resemble
+resist
+resource
+response
+result
+retire
+retreat
+return
+reunion
+reveal
+review
+reward
+rhythm
+rib
+ribbon
+rice
+rich
+ride
+ridge
+rifle
+right
+rigid
+ring
+riot
+ripple
+risk
+ritual
+rival
+river
+road
+roast
+robot
+robust
+rocket
+romance
+roof
+rookie
+room
+rose
+rotate
+rough
+round
+route
+royal
+rubber
+rude
+rug
+rule
+run
+runway
+rural
+sad
+saddle
+sadness
+safe
+sail
+salad
+salmon
+salon
+salt
+salute
+same
+sample
+sand
+satisfy
+satoshi
+sauce
+sausage
+save
+say
+scale
+scan
+scare
+scatter
+scene
+scheme
+school
+science
+scissors
+scorpion
+scout
+scrap
+screen
+script
+scrub
+sea
+search
+season
+seat
+second
+secret
+section
+security
+seed
+seek
+segment
+select
+sell
+seminar
+senior
+sense
+sentence
+series
+service
+session
+settle
+setup
+seven
+shadow
+shaft
+shallow
+share
+shed
+shell
+sheriff
+shield
+shift
+shine
+ship
+shiver
+shock
+shoe
+shoot
+shop
+short
+shoulder
+shove
+shrimp
+shrug
+shuffle
+shy
+sibling
+sick
+side
+siege
+sight
+sign
+silent
+silk
+silly
+silver
+similar
+simple
+since
+sing
+siren
+sister
+situate
+six
+size
+skate
+sketch
+ski
+skill
+skin
+skirt
+skull
+slab
+slam
+sleep
+slender
+slice
+slide
+slight
+slim
+slogan
+slot
+slow
+slush
+small
+smart
+smile
+smoke
+smooth
+snack
+snake
+snap
+sniff
+snow
+soap
+soccer
+social
+sock
+soda
+soft
+solar
+soldier
+solid
+solution
+solve
+someone
+song
+soon
+sorry
+sort
+soul
+sound
+soup
+source
+south
+space
+spare
+spatial
+spawn
+speak
+special
+speed
+spell
+spend
+sphere
+spice
+spider
+spike
+spin
+spirit
+split
+spoil
+sponsor
+spoon
+sport
+spot
+spray
+spread
+spring
+spy
+square
+squeeze
+squirrel
+stable
+stadium
+staff
+stage
+stairs
+stamp
+stand
+start
+state
+stay
+steak
+steel
+stem
+step
+stereo
+stick
+still
+sting
+stock
+stomach
+stone
+stool
+story
+stove
+strategy
+street
+strike
+strong
+struggle
+student
+stuff
+stumble
+style
+subject
+submit
+subway
+success
+such
+sudden
+suffer
+sugar
+suggest
+suit
+summer
+sun
+sunny
+sunset
+super
+supply
+supreme
+sure
+surface
+surge
+surprise
+surround
+survey
+suspect
+sustain
+swallow
+swamp
+swap
+swarm
+swear
+sweet
+swift
+swim
+swing
+switch
+sword
+symbol
+symptom
+syrup
+system
+table
+tackle
+tag
+tail
+talent
+talk
+tank
+tape
+target
+task
+taste
+tattoo
+taxi
+teach
+team
+tell
+ten
+tenant
+tennis
+tent
+term
+test
+text
+thank
+that
+theme
+then
+theory
+there
+they
+thing
+this
+thought
+three
+thrive
+throw
+thumb
+thunder
+ticket
+tide
+tiger
+tilt
+timber
+time
+tiny
+tip
+tired
+tissue
+title
+toast
+tobacco
+today
+toddler
+toe
+together
+toilet
+token
+tomato
+tomorrow
+tone
+tongue
+tonight
+tool
+tooth
+top
+topic
+topple
+torch
+tornado
+tortoise
+toss
+total
+tourist
+toward
+tower
+town
+toy
+track
+trade
+traffic
+tragic
+train
+transfer
+trap
+trash
+travel
+tray
+treat
+tree
+trend
+trial
+tribe
+trick
+trigger
+trim
+trip
+trophy
+trouble
+truck
+true
+truly
+trumpet
+trust
+truth
+try
+tube
+tuition
+tumble
+tuna
+tunnel
+turkey
+turn
+turtle
+twelve
+twenty
+twice
+twin
+twist
+two
+type
+typical
+ugly
+umbrella
+unable
+unaware
+uncle
+uncover
+under
+undo
+unfair
+unfold
+unhappy
+uniform
+unique
+unit
+universe
+unknown
+unlock
+until
+unusual
+unveil
+update
+upgrade
+uphold
+upon
+upper
+upset
+urban
+urge
+usage
+use
+used
+useful
+useless
+usual
+utility
+vacant
+vacuum
+vague
+valid
+valley
+valve
+van
+vanish
+vapor
+various
+vast
+vault
+vehicle
+velvet
+vendor
+venture
+venue
+verb
+verify
+version
+very
+vessel
+veteran
+viable
+vibrant
+vicious
+victory
+video
+view
+village
+vintage
+violin
+virtual
+virus
+visa
+visit
+visual
+vital
+vivid
+vocal
+voice
+void
+volcano
+volume
+vote
+voyage
+wage
+wagon
+wait
+walk
+wall
+walnut
+want
+warfare
+warm
+warrior
+wash
+wasp
+waste
+water
+wave
+way
+wealth
+weapon
+wear
+weasel
+weather
+web
+wedding
+weekend
+weird
+welcome
+west
+wet
+whale
+what
+wheat
+wheel
+when
+where
+whip
+whisper
+wide
+width
+wife
+wild
+will
+win
+window
+wine
+wing
+wink
+winner
+winter
+wire
+wisdom
+wise
+wish
+witness
+wolf
+woman
+wonder
+wood
+wool
+word
+work
+world
+worry
+worth
+wrap
+wreck
+wrestle
+wrist
+write
+wrong
+yard
+year
+yellow
+you
+young
+youth
+zebra
+zero
+zone
+zoo`.split(`
+`);/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */var Mt=BigInt(0),Vt=BigInt(1);function Xe(e,t=""){if(typeof e!="boolean"){let n=t&&`"${t}"`;throw new Error(n+"expected boolean, got type="+typeof e)}return e}function we(e,t,n=""){let r=ke(e),o=e?.length,i=t!==void 0;if(!r||i&&o!==t){let s=n&&`"${n}" `,a=i?` of length ${t}`:"",l=r?`length=${o}`:`type=${typeof e}`;throw new Error(s+"expected Uint8Array"+a+", got "+l)}return e}function Je(e){let t=e.toString(16);return t.length&1?"0"+t:t}function $r(e){if(typeof e!="string")throw new Error("hex string expected, got "+typeof e);return e===""?Mt:BigInt("0x"+e)}function Oe(e){return $r(ne(e))}function zt(e){return N(e),$r(ne(Uint8Array.from(e).reverse()))}function pt(e,t){return le(e.toString(16).padStart(t*2,"0"))}function $t(e,t){return pt(e,t).reverse()}function P(e,t,n){let r;if(typeof t=="string")try{r=le(t)}catch(i){throw new Error(e+" must be hex string or Uint8Array, cause: "+i)}else if(ke(t))r=Uint8Array.from(t);else throw new Error(e+" must be hex string or Uint8Array");let o=r.length;if(typeof n=="number"&&o!==n)throw new Error(e+" of length "+n+" expected, got "+o);return r}var jt=e=>typeof e=="bigint"&&Mt<=e;function Zr(e,t,n){return jt(e)&&jt(t)&&jt(n)&&t<=e&&e<n}function Pr(e,t,n,r){if(!Zr(t,n,r))throw new Error("expected valid "+e+": "+n+" <= n < "+r+", got "+t)}function bt(e){let t;for(t=0;e>Mt;e>>=Vt,t+=1);return t}var xe=e=>(Vt<<BigInt(e))-Vt;function Gr(e,t,n){if(typeof e!="number"||e<2)throw new Error("hashLen must be a number");if(typeof t!="number"||t<2)throw new Error("qByteLen must be a number");if(typeof n!="function")throw new Error("hmacFn must be a function");let r=f=>new Uint8Array(f),o=f=>Uint8Array.of(f),i=r(e),s=r(e),a=0,l=()=>{i.fill(1),s.fill(0),a=0},u=(...f)=>n(s,i,...f),b=(f=r(0))=>{s=u(o(0),f),i=u(),f.length!==0&&(s=u(o(1),f),i=u())},d=()=>{if(a++>=1e3)throw new Error("drbg: tried 1000 values");let f=0,y=[];for(;f<t;){i=u();let g=i.slice();y.push(g),f+=i.length}return Z(...y)};return(f,y)=>{l(),b(f);let g;for(;!(g=y(d()));)b();return l(),g}}function Qe(e,t,n={}){if(!e||typeof e!="object")throw new Error("expected valid options object");function r(o,i,s){let a=e[o];if(s&&a===void 0)return;let l=typeof a;if(l!==i||a===null)throw new Error(`param "${o}" is invalid: expected ${i}, got ${l}`)}Object.entries(t).forEach(([o,i])=>r(o,i,!1)),Object.entries(n).forEach(([o,i])=>r(o,i,!0))}function Zt(e){let t=new WeakMap;return(n,...r)=>{let o=t.get(n);if(o!==void 0)return o;let i=e(n,...r);return t.set(n,i),i}}/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */var W=BigInt(0),G=BigInt(1),He=BigInt(2),Xr=BigInt(3),Jr=BigInt(4),Qr=BigInt(5),to=BigInt(7),Fr=BigInt(8),ro=BigInt(9),en=BigInt(16);function Q(e,t){let n=e%t;return n>=W?n:t+n}function F(e,t,n){let r=e;for(;t-- >W;)r*=r,r%=n;return r}function Wr(e,t){if(e===W)throw new Error("invert: expected non-zero number");if(t<=W)throw new Error("invert: expected positive modulus, got "+t);let n=Q(e,t),r=t,o=W,i=G,s=G,a=W;for(;n!==W;){let u=r/n,b=r%n,d=o-s*u,c=i-a*u;r=n,n=b,o=s,i=a,s=d,a=c}if(r!==G)throw new Error("invert: does not exist");return Q(o,t)}function Pt(e,t,n){if(!e.eql(e.sqr(t),n))throw new Error("Cannot find square root")}function tn(e,t){let n=(e.ORDER+G)/Jr,r=e.pow(t,n);return Pt(e,r,t),r}function no(e,t){let n=(e.ORDER-Qr)/Fr,r=e.mul(t,He),o=e.pow(r,n),i=e.mul(t,o),s=e.mul(e.mul(i,He),o),a=e.mul(i,e.sub(s,e.ONE));return Pt(e,a,t),a}function oo(e){let t=ve(e),n=rn(e),r=n(t,t.neg(t.ONE)),o=n(t,r),i=n(t,t.neg(r)),s=(e+to)/en;return(a,l)=>{let u=a.pow(l,s),b=a.mul(u,r),d=a.mul(u,o),c=a.mul(u,i),f=a.eql(a.sqr(b),l),y=a.eql(a.sqr(d),l);u=a.cmov(u,b,f),b=a.cmov(c,d,y);let g=a.eql(a.sqr(b),l),B=a.cmov(u,b,g);return Pt(a,B,l),B}}function rn(e){if(e<Xr)throw new Error("sqrt is not defined for small field");let t=e-G,n=0;for(;t%He===W;)t/=He,n++;let r=He,o=ve(e);for(;Yr(o,r)===1;)if(r++>1e3)throw new Error("Cannot find square root: probably non-prime P");if(n===1)return tn;let i=o.pow(r,t),s=(t+G)/He;return function(l,u){if(l.is0(u))return u;if(Yr(l,u)!==1)throw new Error("Cannot find square root");let b=n,d=l.mul(l.ONE,i),c=l.pow(u,t),f=l.pow(u,s);for(;!l.eql(c,l.ONE);){if(l.is0(c))return l.ZERO;let y=1,g=l.sqr(c);for(;!l.eql(g,l.ONE);)if(y++,g=l.sqr(g),y===b)throw new Error("Cannot find square root");let B=G<<BigInt(b-y-1),L=l.pow(d,B);b=y,d=l.sqr(L),c=l.mul(c,d),f=l.mul(f,L)}return f}}function io(e){return e%Jr===Xr?tn:e%Fr===Qr?no:e%en===ro?oo(e):rn(e)}var so=["create","isValid","is0","neg","inv","sqrt","sqr","eql","add","sub","mul","pow","div","addN","subN","mulN","sqrN"];function Gt(e){let t={ORDER:"bigint",MASK:"bigint",BYTES:"number",BITS:"number"},n=so.reduce((r,o)=>(r[o]="function",r),t);return Qe(e,n),e}function ao(e,t,n){if(n<W)throw new Error("invalid exponent, negatives unsupported");if(n===W)return e.ONE;if(n===G)return t;let r=e.ONE,o=t;for(;n>W;)n&G&&(r=e.mul(r,o)),o=e.sqr(o),n>>=G;return r}function mt(e,t,n=!1){let r=new Array(t.length).fill(n?e.ZERO:void 0),o=t.reduce((s,a,l)=>e.is0(a)?s:(r[l]=s,e.mul(s,a)),e.ONE),i=e.inv(o);return t.reduceRight((s,a,l)=>e.is0(a)?s:(r[l]=e.mul(s,r[l]),e.mul(s,a)),i),r}function Yr(e,t){let n=(e.ORDER-G)/He,r=e.pow(t,n),o=e.eql(r,e.ONE),i=e.eql(r,e.ZERO),s=e.eql(r,e.neg(e.ONE));if(!o&&!i&&!s)throw new Error("invalid Legendre symbol result");return o?1:i?0:-1}function yt(e,t){t!==void 0&&te(t);let n=t!==void 0?t:e.toString(2).length,r=Math.ceil(n/8);return{nBitLength:n,nByteLength:r}}function ve(e,t,n=!1,r={}){if(e<=W)throw new Error("invalid field: expected ORDER > 0, got "+e);let o,i,s=!1,a;if(typeof t=="object"&&t!=null){if(r.sqrt||n)throw new Error("cannot specify opts in two arguments");let c=t;c.BITS&&(o=c.BITS),c.sqrt&&(i=c.sqrt),typeof c.isLE=="boolean"&&(n=c.isLE),typeof c.modFromBytes=="boolean"&&(s=c.modFromBytes),a=c.allowedLengths}else typeof t=="number"&&(o=t),r.sqrt&&(i=r.sqrt);let{nBitLength:l,nByteLength:u}=yt(e,o);if(u>2048)throw new Error("invalid field: expected ORDER of <= 2048 bytes");let b,d=Object.freeze({ORDER:e,isLE:n,BITS:l,BYTES:u,MASK:xe(l),ZERO:W,ONE:G,allowedLengths:a,create:c=>Q(c,e),isValid:c=>{if(typeof c!="bigint")throw new Error("invalid field element: expected bigint, got "+typeof c);return W<=c&&c<e},is0:c=>c===W,isValidNot0:c=>!d.is0(c)&&d.isValid(c),isOdd:c=>(c&G)===G,neg:c=>Q(-c,e),eql:(c,f)=>c===f,sqr:c=>Q(c*c,e),add:(c,f)=>Q(c+f,e),sub:(c,f)=>Q(c-f,e),mul:(c,f)=>Q(c*f,e),pow:(c,f)=>ao(d,c,f),div:(c,f)=>Q(c*Wr(f,e),e),sqrN:c=>c*c,addN:(c,f)=>c+f,subN:(c,f)=>c-f,mulN:(c,f)=>c*f,inv:c=>Wr(c,e),sqrt:i||(c=>(b||(b=io(e)),b(d,c))),toBytes:c=>n?$t(c,u):pt(c,u),fromBytes:(c,f=!0)=>{if(a){if(!a.includes(c.length)||c.length>u)throw new Error("Field.fromBytes: expected "+a+" bytes, got "+c.length);let g=new Uint8Array(u);g.set(c,n?0:g.length-c.length),c=g}if(c.length!==u)throw new Error("Field.fromBytes: expected "+u+" bytes, got "+c.length);let y=n?zt(c):Oe(c);if(s&&(y=Q(y,e)),!f&&!d.isValid(y))throw new Error("invalid field element: outside of range 0..ORDER");return y},invertBatch:c=>mt(d,c),cmov:(c,f,y)=>y?f:c});return Object.freeze(d)}function nn(e){if(typeof e!="bigint")throw new Error("field order must be bigint");let t=e.toString(2).length;return Math.ceil(t/8)}function Wt(e){let t=nn(e);return t+Math.ceil(t/2)}function Yt(e,t,n=!1){let r=e.length,o=nn(t),i=Wt(t);if(r<16||r<i||r>1024)throw new Error("expected "+i+"-1024 bytes of input, got "+r);let s=n?zt(e):Oe(e),a=Q(s,t-G)+G;return n?$t(a,o):pt(a,o)}/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */var Ne=BigInt(0),Le=BigInt(1);function Fe(e,t){let n=t.negate();return e?n:t}function wt(e,t){let n=mt(e.Fp,t.map(r=>r.Z));return t.map((r,o)=>e.fromAffine(r.toAffine(n[o])))}function cn(e,t){if(!Number.isSafeInteger(e)||e<=0||e>t)throw new Error("invalid window size, expected [1.."+t+"], got W="+e)}function Xt(e,t){cn(e,t);let n=Math.ceil(t/e)+1,r=2**(e-1),o=2**e,i=xe(e),s=BigInt(e);return{windows:n,windowSize:r,mask:i,maxNumber:o,shiftBy:s}}function on(e,t,n){let{windowSize:r,mask:o,maxNumber:i,shiftBy:s}=n,a=Number(e&o),l=e>>s;a>r&&(a-=i,l+=Le);let u=t*r,b=u+Math.abs(a)-1,d=a===0,c=a<0,f=t%2!==0;return{nextN:l,offset:b,isZero:d,isNeg:c,isNegF:f,offsetF:u}}function co(e,t){if(!Array.isArray(e))throw new Error("array expected");e.forEach((n,r)=>{if(!(n instanceof t))throw new Error("invalid point at index "+r)})}function lo(e,t){if(!Array.isArray(e))throw new Error("array of scalars expected");e.forEach((n,r)=>{if(!t.isValid(n))throw new Error("invalid scalar at index "+r)})}var Jt=new WeakMap,ln=new WeakMap;function Qt(e){return ln.get(e)||1}function sn(e){if(e!==Ne)throw new Error("invalid wNAF")}var gt=class{constructor(t,n){this.BASE=t.BASE,this.ZERO=t.ZERO,this.Fn=t.Fn,this.bits=n}_unsafeLadder(t,n,r=this.ZERO){let o=t;for(;n>Ne;)n&Le&&(r=r.add(o)),o=o.double(),n>>=Le;return r}precomputeWindow(t,n){let{windows:r,windowSize:o}=Xt(n,this.bits),i=[],s=t,a=s;for(let l=0;l<r;l++){a=s,i.push(a);for(let u=1;u<o;u++)a=a.add(s),i.push(a);s=a.double()}return i}wNAF(t,n,r){if(!this.Fn.isValid(r))throw new Error("invalid scalar");let o=this.ZERO,i=this.BASE,s=Xt(t,this.bits);for(let a=0;a<s.windows;a++){let{nextN:l,offset:u,isZero:b,isNeg:d,isNegF:c,offsetF:f}=on(r,a,s);r=l,b?i=i.add(Fe(c,n[f])):o=o.add(Fe(d,n[u]))}return sn(r),{p:o,f:i}}wNAFUnsafe(t,n,r,o=this.ZERO){let i=Xt(t,this.bits);for(let s=0;s<i.windows&&r!==Ne;s++){let{nextN:a,offset:l,isZero:u,isNeg:b}=on(r,s,i);if(r=a,!u){let d=n[l];o=o.add(b?d.negate():d)}}return sn(r),o}getPrecomputes(t,n,r){let o=Jt.get(n);return o||(o=this.precomputeWindow(n,t),t!==1&&(typeof r=="function"&&(o=r(o)),Jt.set(n,o))),o}cached(t,n,r){let o=Qt(t);return this.wNAF(o,this.getPrecomputes(o,t,r),n)}unsafe(t,n,r,o){let i=Qt(t);return i===1?this._unsafeLadder(t,n,o):this.wNAFUnsafe(i,this.getPrecomputes(i,t,r),n,o)}createCache(t,n){cn(n,this.bits),ln.set(t,n),Jt.delete(t)}hasCache(t){return Qt(t)!==1}};function fn(e,t,n,r){let o=t,i=e.ZERO,s=e.ZERO;for(;n>Ne||r>Ne;)n&Le&&(i=i.add(o)),r&Le&&(s=s.add(o)),o=o.double(),n>>=Le,r>>=Le;return{p1:i,p2:s}}function un(e,t,n,r){co(n,e),lo(r,t);let o=n.length,i=r.length;if(o!==i)throw new Error("arrays of points and scalars must have equal length");let s=e.ZERO,a=bt(BigInt(o)),l=1;a>12?l=a-3:a>4?l=a-2:a>0&&(l=2);let u=xe(l),b=new Array(Number(u)+1).fill(s),d=Math.floor((t.BITS-1)/l)*l,c=s;for(let f=d;f>=0;f-=l){b.fill(s);for(let g=0;g<i;g++){let B=r[g],L=Number(B>>BigInt(f)&u);b[L]=b[L].add(n[g])}let y=s;for(let g=b.length-1,B=s;g>0;g--)B=B.add(b[g]),y=y.add(B);if(c=c.add(y),f!==0)for(let g=0;g<l;g++)c=c.double()}return c}function an(e,t,n){if(t){if(t.ORDER!==e)throw new Error("Field.ORDER must match order: Fp == p, Fn == n");return Gt(t),t}else return ve(e,{isLE:n})}function dn(e,t,n={},r){if(r===void 0&&(r=e==="edwards"),!t||typeof t!="object")throw new Error(`expected valid ${e} CURVE object`);for(let l of["p","n","h"]){let u=t[l];if(!(typeof u=="bigint"&&u>Ne))throw new Error(`CURVE.${l} must be positive bigint`)}let o=an(t.p,n.Fp,r),i=an(t.n,n.Fn,r),a=["Gx","Gy","a",e==="weierstrass"?"b":"d"];for(let l of a)if(!o.isValid(t[l]))throw new Error(`CURVE.${l} must be valid field element of CURVE.Fp`);return t=Object.freeze(Object.assign({},t)),{CURVE:t,Fp:o,Fn:i}}/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */var hn=(e,t)=>(e+(e>=0?t:-t)/pn)/t;function fo(e,t,n){let[[r,o],[i,s]]=t,a=hn(s*e,n),l=hn(-o*e,n),u=e-a*r-l*i,b=-a*o-l*s,d=u<he,c=b<he;d&&(u=-u),c&&(b=-b);let f=xe(Math.ceil(bt(n)/2))+De;if(u<he||u>=f||b<he||b>=f)throw new Error("splitScalar (endomorphism): failed, k="+e);return{k1neg:d,k1:u,k2neg:c,k2:b}}function er(e){if(!["compact","recovered","der"].includes(e))throw new Error('Signature format must be "compact", "recovered", or "der"');return e}function Ft(e,t){let n={};for(let r of Object.keys(t))n[r]=e[r]===void 0?t[r]:e[r];return Xe(n.lowS,"lowS"),Xe(n.prehash,"prehash"),n.format!==void 0&&er(n.format),n}var tr=class extends Error{constructor(t=""){super(t)}},de={Err:tr,_tlv:{encode:(e,t)=>{let{Err:n}=de;if(e<0||e>256)throw new n("tlv.encode: wrong tag");if(t.length&1)throw new n("tlv.encode: unpadded data");let r=t.length/2,o=Je(r);if(o.length/2&128)throw new n("tlv.encode: long form length too big");let i=r>127?Je(o.length/2|128):"";return Je(e)+i+o+t},decode(e,t){let{Err:n}=de,r=0;if(e<0||e>256)throw new n("tlv.encode: wrong tag");if(t.length<2||t[r++]!==e)throw new n("tlv.decode: wrong tlv");let o=t[r++],i=!!(o&128),s=0;if(!i)s=o;else{let l=o&127;if(!l)throw new n("tlv.decode(long): indefinite length not supported");if(l>4)throw new n("tlv.decode(long): byte length is too big");let u=t.subarray(r,r+l);if(u.length!==l)throw new n("tlv.decode: length bytes not complete");if(u[0]===0)throw new n("tlv.decode(long): zero leftmost byte");for(let b of u)s=s<<8|b;if(r+=l,s<128)throw new n("tlv.decode(long): not minimal encoding")}let a=t.subarray(r,r+s);if(a.length!==s)throw new n("tlv.decode: wrong value length");return{v:a,l:t.subarray(r+s)}}},_int:{encode(e){let{Err:t}=de;if(e<he)throw new t("integer: negative integers are not allowed");let n=Je(e);if(Number.parseInt(n[0],16)&8&&(n="00"+n),n.length&1)throw new t("unexpected DER parsing assertion: unpadded hex");return n},decode(e){let{Err:t}=de;if(e[0]&128)throw new t("invalid signature integer: negative");if(e[0]===0&&!(e[1]&128))throw new t("invalid signature integer: unnecessary leading zero");return Oe(e)}},toSig(e){let{Err:t,_int:n,_tlv:r}=de,o=P("signature",e),{v:i,l:s}=r.decode(48,o);if(s.length)throw new t("invalid signature: left bytes after parsing");let{v:a,l}=r.decode(2,i),{v:u,l:b}=r.decode(2,l);if(b.length)throw new t("invalid signature: left bytes after parsing");return{r:n.decode(a),s:n.decode(u)}},hexFromSig(e){let{_tlv:t,_int:n}=de,r=t.encode(2,n.encode(e.r)),o=t.encode(2,n.encode(e.s)),i=r+o;return t.encode(48,i)}},he=BigInt(0),De=BigInt(1),pn=BigInt(2),xt=BigInt(3),uo=BigInt(4);function qe(e,t){let{BYTES:n}=e,r;if(typeof t=="bigint")r=t;else{let o=P("private key",t);try{r=e.fromBytes(o)}catch{throw new Error(`invalid private key: expected ui8a of size ${n}, got ${typeof t}`)}}if(!e.isValidNot0(r))throw new Error("invalid private key: out of range [1..N-1]");return r}function ho(e,t={}){let n=dn("weierstrass",e,t),{Fp:r,Fn:o}=n,i=n.CURVE,{h:s,n:a}=i;Qe(t,{},{allowInfinityPoint:"boolean",clearCofactor:"function",isTorsionFree:"function",fromBytes:"function",toBytes:"function",endo:"object",wrapPrivateKey:"boolean"});let{endo:l}=t;if(l&&(!r.is0(i.a)||typeof l.beta!="bigint"||!Array.isArray(l.basises)))throw new Error('invalid endo: expected "beta": bigint and "basises": array');let u=mn(r,o);function b(){if(!r.isOdd)throw new Error("compression is not supported: Field does not have .isOdd()")}function d(C,m,p){let{x:h,y:w}=m.toAffine(),x=r.toBytes(h);if(Xe(p,"isCompressed"),p){b();let A=!r.isOdd(w);return Z(bn(A),x)}else return Z(Uint8Array.of(4),x,r.toBytes(w))}function c(C){we(C,void 0,"Point");let{publicKey:m,publicKeyUncompressed:p}=u,h=C.length,w=C[0],x=C.subarray(1);if(h===m&&(w===2||w===3)){let A=r.fromBytes(x);if(!r.isValid(A))throw new Error("bad point: is not on curve, wrong x");let k=g(A),v;try{v=r.sqrt(k)}catch(q){let R=q instanceof Error?": "+q.message:"";throw new Error("bad point: is not on curve, sqrt error"+R)}b();let S=r.isOdd(v);return(w&1)===1!==S&&(v=r.neg(v)),{x:A,y:v}}else if(h===p&&w===4){let A=r.BYTES,k=r.fromBytes(x.subarray(0,A)),v=r.fromBytes(x.subarray(A,A*2));if(!B(k,v))throw new Error("bad point: is not on curve");return{x:k,y:v}}else throw new Error(`bad point: got length ${h}, expected compressed=${m} or uncompressed=${p}`)}let f=t.toBytes||d,y=t.fromBytes||c;function g(C){let m=r.sqr(C),p=r.mul(m,C);return r.add(r.add(p,r.mul(C,i.a)),i.b)}function B(C,m){let p=r.sqr(m),h=g(C);return r.eql(p,h)}if(!B(i.Gx,i.Gy))throw new Error("bad curve params: generator point");let L=r.mul(r.pow(i.a,xt),uo),M=r.mul(r.sqr(i.b),BigInt(27));if(r.is0(r.add(L,M)))throw new Error("bad curve params: a or b");function E(C,m,p=!1){if(!r.isValid(m)||p&&r.is0(m))throw new Error(`bad point coordinate ${C}`);return m}function j(C){if(!(C instanceof I))throw new Error("ProjectivePoint expected")}function T(C){if(!l||!l.basises)throw new Error("no endo");return fo(C,l.basises,o.ORDER)}let Y=Zt((C,m)=>{let{X:p,Y:h,Z:w}=C;if(r.eql(w,r.ONE))return{x:p,y:h};let x=C.is0();m==null&&(m=x?r.ONE:r.inv(w));let A=r.mul(p,m),k=r.mul(h,m),v=r.mul(w,m);if(x)return{x:r.ZERO,y:r.ZERO};if(!r.eql(v,r.ONE))throw new Error("invZ was invalid");return{x:A,y:k}}),pe=Zt(C=>{if(C.is0()){if(t.allowInfinityPoint&&!r.is0(C.Y))return;throw new Error("bad point: ZERO")}let{x:m,y:p}=C.toAffine();if(!r.isValid(m)||!r.isValid(p))throw new Error("bad point: x or y not field elements");if(!B(m,p))throw new Error("bad point: equation left != right");if(!C.isTorsionFree())throw new Error("bad point: not in prime-order subgroup");return!0});function z(C,m,p,h,w){return p=new I(r.mul(p.X,C),p.Y,p.Z),m=Fe(h,m),p=Fe(w,p),m.add(p)}class I{constructor(m,p,h){this.X=E("x",m),this.Y=E("y",p,!0),this.Z=E("z",h),Object.freeze(this)}static CURVE(){return i}static fromAffine(m){let{x:p,y:h}=m||{};if(!m||!r.isValid(p)||!r.isValid(h))throw new Error("invalid affine point");if(m instanceof I)throw new Error("projective point not allowed");return r.is0(p)&&r.is0(h)?I.ZERO:new I(p,h,r.ONE)}static fromBytes(m){let p=I.fromAffine(y(we(m,void 0,"point")));return p.assertValidity(),p}static fromHex(m){return I.fromBytes(P("pointHex",m))}get x(){return this.toAffine().x}get y(){return this.toAffine().y}precompute(m=8,p=!0){return ee.createCache(this,m),p||this.multiply(xt),this}assertValidity(){pe(this)}hasEvenY(){let{y:m}=this.toAffine();if(!r.isOdd)throw new Error("Field doesn't support isOdd");return!r.isOdd(m)}equals(m){j(m);let{X:p,Y:h,Z:w}=this,{X:x,Y:A,Z:k}=m,v=r.eql(r.mul(p,k),r.mul(x,w)),S=r.eql(r.mul(h,k),r.mul(A,w));return v&&S}negate(){return new I(this.X,r.neg(this.Y),this.Z)}double(){let{a:m,b:p}=i,h=r.mul(p,xt),{X:w,Y:x,Z:A}=this,k=r.ZERO,v=r.ZERO,S=r.ZERO,U=r.mul(w,w),q=r.mul(x,x),R=r.mul(A,A),_=r.mul(w,x);return _=r.add(_,_),S=r.mul(w,A),S=r.add(S,S),k=r.mul(m,S),v=r.mul(h,R),v=r.add(k,v),k=r.sub(q,v),v=r.add(q,v),v=r.mul(k,v),k=r.mul(_,k),S=r.mul(h,S),R=r.mul(m,R),_=r.sub(U,R),_=r.mul(m,_),_=r.add(_,S),S=r.add(U,U),U=r.add(S,U),U=r.add(U,R),U=r.mul(U,_),v=r.add(v,U),R=r.mul(x,A),R=r.add(R,R),U=r.mul(R,_),k=r.sub(k,U),S=r.mul(R,q),S=r.add(S,S),S=r.add(S,S),new I(k,v,S)}add(m){j(m);let{X:p,Y:h,Z:w}=this,{X:x,Y:A,Z:k}=m,v=r.ZERO,S=r.ZERO,U=r.ZERO,q=i.a,R=r.mul(i.b,xt),_=r.mul(p,x),K=r.mul(h,A),D=r.mul(w,k),X=r.add(p,h),O=r.add(x,A);X=r.mul(X,O),O=r.add(_,K),X=r.sub(X,O),O=r.add(p,w);let $=r.add(x,k);return O=r.mul(O,$),$=r.add(_,D),O=r.sub(O,$),$=r.add(h,w),v=r.add(A,k),$=r.mul($,v),v=r.add(K,D),$=r.sub($,v),U=r.mul(q,O),v=r.mul(R,D),U=r.add(v,U),v=r.sub(K,U),U=r.add(K,U),S=r.mul(v,U),K=r.add(_,_),K=r.add(K,_),D=r.mul(q,D),O=r.mul(R,O),K=r.add(K,D),D=r.sub(_,D),D=r.mul(q,D),O=r.add(O,D),_=r.mul(K,O),S=r.add(S,_),_=r.mul($,O),v=r.mul(X,v),v=r.sub(v,_),_=r.mul(X,K),U=r.mul($,U),U=r.add(U,_),new I(v,S,U)}subtract(m){return this.add(m.negate())}is0(){return this.equals(I.ZERO)}multiply(m){let{endo:p}=t;if(!o.isValidNot0(m))throw new Error("invalid scalar: out of range");let h,w,x=A=>ee.cached(this,A,k=>wt(I,k));if(p){let{k1neg:A,k1:k,k2neg:v,k2:S}=T(m),{p:U,f:q}=x(k),{p:R,f:_}=x(S);w=q.add(_),h=z(p.beta,U,R,A,v)}else{let{p:A,f:k}=x(m);h=A,w=k}return wt(I,[h,w])[0]}multiplyUnsafe(m){let{endo:p}=t,h=this;if(!o.isValid(m))throw new Error("invalid scalar: out of range");if(m===he||h.is0())return I.ZERO;if(m===De)return h;if(ee.hasCache(this))return this.multiply(m);if(p){let{k1neg:w,k1:x,k2neg:A,k2:k}=T(m),{p1:v,p2:S}=fn(I,h,x,k);return z(p.beta,v,S,w,A)}else return ee.unsafe(h,m)}multiplyAndAddUnsafe(m,p,h){let w=this.multiplyUnsafe(p).add(m.multiplyUnsafe(h));return w.is0()?void 0:w}toAffine(m){return Y(this,m)}isTorsionFree(){let{isTorsionFree:m}=t;return s===De?!0:m?m(I,this):ee.unsafe(this,a).is0()}clearCofactor(){let{clearCofactor:m}=t;return s===De?this:m?m(I,this):this.multiplyUnsafe(s)}isSmallOrder(){return this.multiplyUnsafe(s).is0()}toBytes(m=!0){return Xe(m,"isCompressed"),this.assertValidity(),f(I,this,m)}toHex(m=!0){return ne(this.toBytes(m))}toString(){return`<Point ${this.is0()?"ZERO":this.toHex()}>`}get px(){return this.X}get py(){return this.X}get pz(){return this.Z}toRawBytes(m=!0){return this.toBytes(m)}_setWindowSize(m){this.precompute(m)}static normalizeZ(m){return wt(I,m)}static msm(m,p){return un(I,o,m,p)}static fromPrivateKey(m){return I.BASE.multiply(qe(o,m))}}I.BASE=new I(i.Gx,i.Gy,r.ONE),I.ZERO=new I(r.ZERO,r.ONE,r.ZERO),I.Fp=r,I.Fn=o;let ae=o.BITS,ee=new gt(I,t.endo?Math.ceil(ae/2):ae);return I.BASE.precompute(8),I}function bn(e){return Uint8Array.of(e?2:3)}function mn(e,t){return{secretKey:t.BYTES,publicKey:1+e.BYTES,publicKeyUncompressed:1+2*e.BYTES,publicKeyHasPrefix:!0,signature:2*t.BYTES}}function po(e,t={}){let{Fn:n}=e,r=t.randomBytes||Te,o=Object.assign(mn(e.Fp,n),{seed:Wt(n.ORDER)});function i(f){try{return!!qe(n,f)}catch{return!1}}function s(f,y){let{publicKey:g,publicKeyUncompressed:B}=o;try{let L=f.length;return y===!0&&L!==g||y===!1&&L!==B?!1:!!e.fromBytes(f)}catch{return!1}}function a(f=r(o.seed)){return Yt(we(f,o.seed,"seed"),n.ORDER)}function l(f,y=!0){return e.BASE.multiply(qe(n,f)).toBytes(y)}function u(f){let y=a(f);return{secretKey:y,publicKey:l(y)}}function b(f){if(typeof f=="bigint")return!1;if(f instanceof e)return!0;let{secretKey:y,publicKey:g,publicKeyUncompressed:B}=o;if(n.allowedLengths||y===g)return;let L=P("key",f).length;return L===g||L===B}function d(f,y,g=!0){if(b(f)===!0)throw new Error("first arg must be private key");if(b(y)===!1)throw new Error("second arg must be public key");let B=qe(n,f);return e.fromHex(y).multiply(B).toBytes(g)}return Object.freeze({getPublicKey:l,getSharedSecret:d,keygen:u,Point:e,utils:{isValidSecretKey:i,isValidPublicKey:s,randomSecretKey:a,isValidPrivateKey:i,randomPrivateKey:a,normPrivateKeyToScalar:f=>qe(n,f),precompute(f=8,y=e.BASE){return y.precompute(f,!1)}},lengths:o})}function bo(e,t,n={}){Ce(t),Qe(n,{},{hmac:"function",lowS:"boolean",randomBytes:"function",bits2int:"function",bits2int_modN:"function"});let r=n.randomBytes||Te,o=n.hmac||((p,...h)=>be(t,p,Z(...h))),{Fp:i,Fn:s}=e,{ORDER:a,BITS:l}=s,{keygen:u,getPublicKey:b,getSharedSecret:d,utils:c,lengths:f}=po(e,n),y={prehash:!1,lowS:typeof n.lowS=="boolean"?n.lowS:!1,format:void 0,extraEntropy:!1},g="compact";function B(p){let h=a>>De;return p>h}function L(p,h){if(!s.isValidNot0(h))throw new Error(`invalid signature ${p}: out of range 1..Point.Fn.ORDER`);return h}function M(p,h){er(h);let w=f.signature,x=h==="compact"?w:h==="recovered"?w+1:void 0;return we(p,x,`${h} signature`)}class E{constructor(h,w,x){this.r=L("r",h),this.s=L("s",w),x!=null&&(this.recovery=x),Object.freeze(this)}static fromBytes(h,w=g){M(h,w);let x;if(w==="der"){let{r:S,s:U}=de.toSig(we(h));return new E(S,U)}w==="recovered"&&(x=h[0],w="compact",h=h.subarray(1));let A=s.BYTES,k=h.subarray(0,A),v=h.subarray(A,A*2);return new E(s.fromBytes(k),s.fromBytes(v),x)}static fromHex(h,w){return this.fromBytes(le(h),w)}addRecoveryBit(h){return new E(this.r,this.s,h)}recoverPublicKey(h){let w=i.ORDER,{r:x,s:A,recovery:k}=this;if(k==null||![0,1,2,3].includes(k))throw new Error("recovery id invalid");if(a*pn<w&&k>1)throw new Error("recovery id is ambiguous for h>1 curve");let S=k===2||k===3?x+a:x;if(!i.isValid(S))throw new Error("recovery id 2 or 3 invalid");let U=i.toBytes(S),q=e.fromBytes(Z(bn((k&1)===0),U)),R=s.inv(S),_=T(P("msgHash",h)),K=s.create(-_*R),D=s.create(A*R),X=e.BASE.multiplyUnsafe(K).add(q.multiplyUnsafe(D));if(X.is0())throw new Error("point at infinify");return X.assertValidity(),X}hasHighS(){return B(this.s)}toBytes(h=g){if(er(h),h==="der")return le(de.hexFromSig(this));let w=s.toBytes(this.r),x=s.toBytes(this.s);if(h==="recovered"){if(this.recovery==null)throw new Error("recovery bit must be present");return Z(Uint8Array.of(this.recovery),w,x)}return Z(w,x)}toHex(h){return ne(this.toBytes(h))}assertValidity(){}static fromCompact(h){return E.fromBytes(P("sig",h),"compact")}static fromDER(h){return E.fromBytes(P("sig",h),"der")}normalizeS(){return this.hasHighS()?new E(this.r,s.neg(this.s),this.recovery):this}toDERRawBytes(){return this.toBytes("der")}toDERHex(){return ne(this.toBytes("der"))}toCompactRawBytes(){return this.toBytes("compact")}toCompactHex(){return ne(this.toBytes("compact"))}}let j=n.bits2int||function(h){if(h.length>8192)throw new Error("input is too large");let w=Oe(h),x=h.length*8-l;return x>0?w>>BigInt(x):w},T=n.bits2int_modN||function(h){return s.create(j(h))},Y=xe(l);function pe(p){return Pr("num < 2^"+l,p,he,Y),s.toBytes(p)}function z(p,h){return we(p,void 0,"message"),h?we(t(p),void 0,"prehashed message"):p}function I(p,h,w){if(["recovered","canonical"].some(K=>K in w))throw new Error("sign() legacy options not supported");let{lowS:x,prehash:A,extraEntropy:k}=Ft(w,y);p=z(p,A);let v=T(p),S=qe(s,h),U=[pe(S),pe(v)];if(k!=null&&k!==!1){let K=k===!0?r(f.secretKey):k;U.push(P("extraEntropy",K))}let q=Z(...U),R=v;function _(K){let D=j(K);if(!s.isValidNot0(D))return;let X=s.inv(D),O=e.BASE.multiply(D).toAffine(),$=s.create(O.x);if($===he)return;let rt=s.create(X*s.create(R+$*S));if(rt===he)return;let dr=(O.x===$?0:2)|Number(O.y&De),hr=rt;return x&&B(rt)&&(hr=s.neg(rt),dr^=1),new E($,hr,dr)}return{seed:q,k2sig:_}}function ae(p,h,w={}){p=P("message",p);let{seed:x,k2sig:A}=I(p,h,w);return Gr(t.outputLen,s.BYTES,o)(x,A)}function ee(p){let h,w=typeof p=="string"||ke(p),x=!w&&p!==null&&typeof p=="object"&&typeof p.r=="bigint"&&typeof p.s=="bigint";if(!w&&!x)throw new Error("invalid signature, expected Uint8Array, hex string or Signature instance");if(x)h=new E(p.r,p.s);else if(w){try{h=E.fromBytes(P("sig",p),"der")}catch(A){if(!(A instanceof de.Err))throw A}if(!h)try{h=E.fromBytes(P("sig",p),"compact")}catch{return!1}}return h||!1}function C(p,h,w,x={}){let{lowS:A,prehash:k,format:v}=Ft(x,y);if(w=P("publicKey",w),h=z(P("message",h),k),"strict"in x)throw new Error("options.strict was renamed to lowS");let S=v===void 0?ee(p):E.fromBytes(P("sig",p),v);if(S===!1)return!1;try{let U=e.fromBytes(w);if(A&&S.hasHighS())return!1;let{r:q,s:R}=S,_=T(h),K=s.inv(R),D=s.create(_*K),X=s.create(q*K),O=e.BASE.multiplyUnsafe(D).add(U.multiplyUnsafe(X));return O.is0()?!1:s.create(O.x)===q}catch{return!1}}function m(p,h,w={}){let{prehash:x}=Ft(w,y);return h=z(h,x),E.fromBytes(p,"recovered").recoverPublicKey(h).toBytes()}return Object.freeze({keygen:u,getPublicKey:b,getSharedSecret:d,utils:c,lengths:f,Point:e,sign:ae,verify:C,recoverPublicKey:m,Signature:E,hash:t})}function mo(e){let t={a:e.a,b:e.b,p:e.Fp.ORDER,n:e.n,h:e.h,Gx:e.Gx,Gy:e.Gy},n=e.Fp,r=e.allowedPrivateKeyLengths?Array.from(new Set(e.allowedPrivateKeyLengths.map(s=>Math.ceil(s/2)))):void 0,o=ve(t.n,{BITS:e.nBitLength,allowedLengths:r,modFromBytes:e.wrapPrivateKey}),i={Fp:n,Fn:o,allowInfinityPoint:e.allowInfinityPoint,endo:e.endo,isTorsionFree:e.isTorsionFree,clearCofactor:e.clearCofactor,fromBytes:e.fromBytes,toBytes:e.toBytes};return{CURVE:t,curveOpts:i}}function yo(e){let{CURVE:t,curveOpts:n}=mo(e),r={hmac:e.hmac,randomBytes:e.randomBytes,lowS:e.lowS,bits2int:e.bits2int,bits2int_modN:e.bits2int_modN};return{CURVE:t,curveOpts:n,hash:e.hash,ecdsaOpts:r}}function go(e,t){let n=t.Point;return Object.assign({},t,{ProjectivePoint:n,CURVE:Object.assign({},e,yt(n.Fn.ORDER,n.Fn.BITS))})}function yn(e){let{CURVE:t,curveOpts:n,hash:r,ecdsaOpts:o}=yo(e),i=ho(t,n),s=bo(i,r,o);return go(e,s)}/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */function gn(e,t){let n=r=>yn({...e,hash:r});return{...n(t),create:n}}/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */var nr={p:BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"),n:BigInt("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"),h:BigInt(1),a:BigInt(0),b:BigInt(7),Gx:BigInt("0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"),Gy:BigInt("0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8")},wo={beta:BigInt("0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee"),basises:[[BigInt("0x3086d221a7d46bcde86c90e49284eb15"),-BigInt("0xe4437ed6010e88286f547fa90abfe4c3")],[BigInt("0x114ca50f7a8e2f3f657c1108d9d44cfd8"),BigInt("0x3086d221a7d46bcde86c90e49284eb15")]]};var wn=BigInt(2);function xo(e){let t=nr.p,n=BigInt(3),r=BigInt(6),o=BigInt(11),i=BigInt(22),s=BigInt(23),a=BigInt(44),l=BigInt(88),u=e*e*e%t,b=u*u*e%t,d=F(b,n,t)*b%t,c=F(d,n,t)*b%t,f=F(c,wn,t)*u%t,y=F(f,o,t)*f%t,g=F(y,i,t)*y%t,B=F(g,a,t)*g%t,L=F(B,l,t)*B%t,M=F(L,a,t)*g%t,E=F(M,n,t)*b%t,j=F(E,s,t)*y%t,T=F(j,r,t)*u%t,Y=F(T,wn,t);if(!rr.eql(rr.sqr(Y),e))throw new Error("Cannot find square root");return Y}var rr=ve(nr.p,{sqrt:xo}),se=gn({...nr,Fp:rr,lowS:!0,endo:wo},ue);var vo=Uint8Array.from([7,4,13,1,10,6,15,3,12,0,9,5,2,14,11,8]),vn=Uint8Array.from(new Array(16).fill(0).map((e,t)=>t)),Eo=vn.map(e=>(9*e+5)%16),En=(()=>{let n=[[vn],[Eo]];for(let r=0;r<4;r++)for(let o of n)o.push(o[r].map(i=>vo[i]));return n})(),Bn=En[0],kn=En[1],An=[[11,14,15,12,5,8,7,9,11,13,14,15,6,7,9,8],[12,13,11,15,6,9,9,7,12,15,11,13,7,8,7,7],[13,15,14,11,7,7,6,8,13,14,13,12,5,5,6,9],[14,11,12,14,8,6,5,5,15,12,15,14,9,9,8,6],[15,12,13,13,9,5,8,6,14,11,12,11,8,6,5,5]].map(e=>Uint8Array.from(e)),Bo=Bn.map((e,t)=>e.map(n=>An[t][n])),ko=kn.map((e,t)=>e.map(n=>An[t][n])),Ao=Uint32Array.from([0,1518500249,1859775393,2400959708,2840853838]),So=Uint32Array.from([1352829926,1548603684,1836072691,2053994217,0]);function xn(e,t,n,r){return e===0?t^n^r:e===1?t&n|~t&r:e===2?(t|~n)^r:e===3?t&r|n&~r:t^(n|~r)}var vt=new Uint32Array(16),Et=class extends Ae{constructor(){super(64,20,8,!0),this.h0=1732584193,this.h1=-271733879,this.h2=-1732584194,this.h3=271733878,this.h4=-1009589776}get(){let{h0:t,h1:n,h2:r,h3:o,h4:i}=this;return[t,n,r,o,i]}set(t,n,r,o,i){this.h0=t|0,this.h1=n|0,this.h2=r|0,this.h3=o|0,this.h4=i|0}process(t,n){for(let f=0;f<16;f++,n+=4)vt[f]=t.getUint32(n,!0);let r=this.h0|0,o=r,i=this.h1|0,s=i,a=this.h2|0,l=a,u=this.h3|0,b=u,d=this.h4|0,c=d;for(let f=0;f<5;f++){let y=4-f,g=Ao[f],B=So[f],L=Bn[f],M=kn[f],E=Bo[f],j=ko[f];for(let T=0;T<16;T++){let Y=je(r+xn(f,i,a,u)+vt[L[T]]+g,E[T])+d|0;r=d,d=u,u=je(a,10)|0,a=i,i=Y}for(let T=0;T<16;T++){let Y=je(o+xn(y,s,l,b)+vt[M[T]]+B,j[T])+c|0;o=c,c=b,b=je(l,10)|0,l=s,s=Y}}this.set(this.h1+a+b|0,this.h2+u+c|0,this.h3+d+o|0,this.h4+r+s|0,this.h0+i+l|0)}roundClean(){J(vt)}destroy(){this.destroyed=!0,J(this.buffer),this.set(0,0,0,0,0)}},Bt=ze(()=>new Et);/*! scure-bip32 - MIT License (c) 2022 Patricio Palladino, Paul Miller (paulmillr.com) */var kt=se.ProjectivePoint,or=dt(ue);function Sn(e){N(e);let t=e.length===0?"0":ne(e);return BigInt("0x"+t)}function Io(e){if(typeof e!="bigint")throw new Error("bigint expected");return le(e.toString(16).padStart(64,"0"))}var Ho=Ve("Bitcoin seed"),ir={private:76066276,public:76067358},sr=2147483648,Lo=e=>Bt(ue(e)),Uo=e=>oe(e).getUint32(0,!1),At=e=>{if(!Number.isSafeInteger(e)||e<0||e>2**32-1)throw new Error("invalid number, should be from 0 to 2**32-1, got "+e);let t=new Uint8Array(4);return oe(t).setUint32(0,e,!1),t},St=class e{get fingerprint(){if(!this.pubHash)throw new Error("No publicKey set!");return Uo(this.pubHash)}get identifier(){return this.pubHash}get pubKeyHash(){return this.pubHash}get privateKey(){return this.privKeyBytes||null}get publicKey(){return this.pubKey||null}get privateExtendedKey(){let t=this.privateKey;if(!t)throw new Error("No private key");return or.encode(this.serialize(this.versions.private,Z(new Uint8Array([0]),t)))}get publicExtendedKey(){if(!this.pubKey)throw new Error("No public key");return or.encode(this.serialize(this.versions.public,this.pubKey))}static fromMasterSeed(t,n=ir){if(N(t),8*t.length<128||8*t.length>512)throw new Error("HDKey: seed length must be between 128 and 512 bits; 256 bits is advised, got "+t.length);let r=be(Pe,Ho,t);return new e({versions:n,chainCode:r.slice(32),privateKey:r.slice(0,32)})}static fromExtendedKey(t,n=ir){let r=or.decode(t),o=oe(r),i=o.getUint32(0,!1),s={versions:n,depth:r[4],parentFingerprint:o.getUint32(5,!1),index:o.getUint32(9,!1),chainCode:r.slice(13,45)},a=r.slice(45),l=a[0]===0;if(i!==n[l?"private":"public"])throw new Error("Version mismatch");return l?new e({...s,privateKey:a.slice(1)}):new e({...s,publicKey:a})}static fromJSON(t){return e.fromExtendedKey(t.xpriv)}constructor(t){if(this.depth=0,this.index=0,this.chainCode=null,this.parentFingerprint=0,!t||typeof t!="object")throw new Error("HDKey.constructor must not be called directly");if(this.versions=t.versions||ir,this.depth=t.depth||0,this.chainCode=t.chainCode||null,this.index=t.index||0,this.parentFingerprint=t.parentFingerprint||0,!this.depth&&(this.parentFingerprint||this.index))throw new Error("HDKey: zero depth with non-zero index/parent fingerprint");if(t.publicKey&&t.privateKey)throw new Error("HDKey: publicKey and privateKey at same time.");if(t.privateKey){if(!se.utils.isValidPrivateKey(t.privateKey))throw new Error("Invalid private key");this.privKey=typeof t.privateKey=="bigint"?t.privateKey:Sn(t.privateKey),this.privKeyBytes=Io(this.privKey),this.pubKey=se.getPublicKey(t.privateKey,!0)}else if(t.publicKey)this.pubKey=kt.fromHex(t.publicKey).toRawBytes(!0);else throw new Error("HDKey: no public or private key provided");this.pubHash=Lo(this.pubKey)}derive(t){if(!/^[mM]'?/.test(t))throw new Error('Path must start with "m" or "M"');if(/^[mM]'?$/.test(t))return this;let n=t.replace(/^[mM]'?\//,"").split("/"),r=this;for(let o of n){let i=/^(\d+)('?)$/.exec(o),s=i&&i[1];if(!i||i.length!==3||typeof s!="string")throw new Error("invalid child index: "+o);let a=+s;if(!Number.isSafeInteger(a)||a>=sr)throw new Error("Invalid index");i[2]==="'"&&(a+=sr),r=r.deriveChild(a)}return r}deriveChild(t){if(!this.pubKey||!this.chainCode)throw new Error("No publicKey or chainCode set");let n=At(t);if(t>=sr){let a=this.privateKey;if(!a)throw new Error("Could not derive hardened child key");n=Z(new Uint8Array([0]),a,n)}else n=Z(this.pubKey,n);let r=be(Pe,this.chainCode,n),o=Sn(r.slice(0,32)),i=r.slice(32);if(!se.utils.isValidPrivateKey(o))throw new Error("Tweak bigger than curve order");let s={versions:this.versions,chainCode:i,depth:this.depth+1,parentFingerprint:this.fingerprint,index:t};try{if(this.privateKey){let a=Q(this.privKey+o,se.CURVE.n);if(!se.utils.isValidPrivateKey(a))throw new Error("The tweak was out of range or the resulted private key is invalid");s.privateKey=a}else{let a=kt.fromHex(this.pubKey).add(kt.fromPrivateKey(o));if(a.equals(kt.ZERO))throw new Error("The tweak was equal to negative P, which made the result key invalid");s.publicKey=a.toRawBytes(!0)}return new e(s)}catch{return this.deriveChild(t+1)}}sign(t){if(!this.privateKey)throw new Error("No privateKey set!");return N(t,32),se.sign(t,this.privKey).toCompactRawBytes()}verify(t,n){if(N(t,32),N(n,64),!this.publicKey)throw new Error("No publicKey set!");let r;try{r=se.Signature.fromCompact(n)}catch{return!1}return se.verify(r,t,this.publicKey)}wipePrivateData(){return this.privKey=void 0,this.privKeyBytes&&(this.privKeyBytes.fill(0),this.privKeyBytes=void 0),this}toJSON(){return{xpriv:this.privateExtendedKey,xpub:this.publicExtendedKey}}serialize(t,n){if(!this.chainCode)throw new Error("No chainCode set");return N(n,33),Z(At(t),new Uint8Array([this.depth]),At(this.parentFingerprint),At(this.index),this.chainCode,n)}};var ar=ue;var In=Bt;var Co=dt(ar),cr={mainnet:{coin:0,hrp:"bc",wif:128,label:"Bitcoin mainnet",versions:{private:78791436,public:78792518}},testnet:{coin:1,hrp:"tb",wif:239,label:"Bitcoin testnet",versions:{private:73341116,public:73342198}}};function Hn(e=12){if(e!==12&&e!==24)throw new Error("Word count must be 12 or 24");return jr(ht,e===12?128:256)}function Ln(e){return e.normalize("NFKD").trim().toLowerCase().split(/\s+/).filter(Boolean).join(" ")}function Un(e){let t=e?e.split(" "):[];if(![12,15,18,21,24].includes(t.length))return`A recovery phrase has 12, 15, 18, 21 or 24 words (this one has ${t.length}).`;let n=t.filter(r=>!ht.includes(r));return n.length?`Not in the BIP39 English word list: ${n.join(", ")}`:Mr(e,ht)?null:"The checksum does not match: a word is wrong or the words are out of order."}function _o(e){return In(ar(e))}function To(e,t){return Dt.encode(t,[0,...Dt.toWords(_o(e))])}function Ro(e,t){let n=new Uint8Array(34);return n[0]=t,n.set(e,1),n[33]=1,Co.encode(n)}function Cn(e,{passphrase:t="",network:n="mainnet",count:r=5}={}){let o=cr[n];if(!o)throw new Error(`Unknown network: ${n}`);let i=zr(e,t),s=St.fromMasterSeed(i,o.versions),a=`m/84'/${o.coin}'/0'`,l=s.derive(a),u=b=>{let d=l.deriveChild(b);return Array.from({length:r},(c,f)=>{let y=d.deriveChild(f);return{path:`${a}/${b}/${f}`,address:To(y.publicKey,o.hrp),wif:Ro(y.privateKey,o.wif)}})};return{accountPath:a,accountXpub:l.publicExtendedKey,receive:u(0),change:u(1)}}var H=e=>document.getElementById(e),Ee=null;function fr(){let e=H("net-status"),t=navigator.onLine;e.className=`chip ${t?"online":"offline"}`,e.textContent=t?"Online: fine for testing":"Offline: safest mode"}addEventListener("online",fr);addEventListener("offline",fr);fr();location.protocol==="file:"&&H("download-link").replaceWith(document.createTextNode("Save this page"));var _n=[["tab-new","panel-new"],["tab-restore","panel-restore"]];for(let[e]of _n)H(e).addEventListener("click",()=>{for(let[t,n]of _n){let r=t===e;H(t).setAttribute("aria-selected",String(r)),H(n).hidden=!r}});function Ko(){return{network:H("network").value,count:Number(H("count").value),passphrase:H("passphrase").value}}function tt(e){let t=H("toast");t.textContent=e,t.classList.add("show"),clearTimeout(tt.timer),tt.timer=setTimeout(()=>t.classList.remove("show"),1800)}async function It(e,t){try{await navigator.clipboard.writeText(e),tt(`${t} copied`)}catch{tt("Copy failed: select the text and copy it manually")}}function Tn(e,t){let n=document.createElement("button");return n.className="ghost",n.textContent=e,n.addEventListener("click",t),n}function et(e,t,n){let r=e.insertCell();return n&&(r.className=n),t!==void 0&&(r.textContent=t),r}function Rn(e,t){e.replaceChildren();let n=e.createTHead().insertRow();for(let[o,i]of[["#"],["Address"],[""],["Private key (WIF)","key-col"],["","key-col"]]){let s=document.createElement("th");s.textContent=o,i&&(s.className=i),n.append(s)}let r=e.createTBody();t.forEach((o,i)=>{let s=r.insertRow();et(s,String(i),"idx");let a=et(s,o.address,"mono");a.title=o.path,et(s,void 0,"btn").append(Tn("Copy",()=>It(o.address,"Address"))),et(s,o.wif,"mono wif key-col"),et(s,void 0,"btn key-col").append(Tn("Copy",()=>It(o.wif,"Private key")))})}function Kn(e){H("phrase").classList.toggle("concealed",!e),H("toggle-phrase").textContent=e?"Hide":"Reveal"}function ur(e){let t=Ko(),n=Cn(e,t);Ee={mnemonic:e,wallet:n,network:t.network},H("phrase").replaceChildren(...e.split(" ").map(r=>{let o=document.createElement("li");return o.textContent=r,o})),Kn(!1),Rn(H("receive"),n.receive),Rn(H("change"),n.change),H("show-keys").checked=!1,On(),H("xpub").textContent=n.accountXpub,H("path").textContent=`${n.accountPath}/0/i`,H("network-label").textContent=cr[t.network].label+(t.passphrase?" (with passphrase)":""),H("result").hidden=!1,H("result").scrollIntoView({behavior:"smooth",block:"start"})}function On(){let e=H("show-keys").checked;for(let t of["receive","change"])H(t).classList.toggle("with-keys",e)}function Oo(){Ee=null;for(let e of["phrase","receive","change","xpub","path","network-label"])H(e).replaceChildren();H("restore-input").value="",H("passphrase").value="",H("restore-error").textContent="",H("result").hidden=!0,tt("Cleared from this page")}H("generate").addEventListener("click",()=>{let e=Number(document.querySelector('input[name="words"]:checked').value);ur(Hn(e))});H("restore").addEventListener("click",()=>{let e=Ln(H("restore-input").value),t=Un(e);H("restore-error").textContent=t??"",t||ur(e)});H("restore-input").addEventListener("input",()=>{H("restore-error").textContent=""});H("toggle-phrase").addEventListener("click",()=>{Kn(H("phrase").classList.contains("concealed"))});H("copy-phrase").addEventListener("click",()=>{Ee&&confirm("Copying puts your recovery phrase on the clipboard, where other apps can read it. Continue?")&&It(Ee.mnemonic,"Recovery phrase")});H("show-keys").addEventListener("change",e=>{e.target.checked&&!confirm("Private keys give full control of the coins at each address. Show them?")&&(e.target.checked=!1),On()});H("copy-xpub").addEventListener("click",()=>Ee&&It(Ee.wallet.accountXpub,"Watch-only key"));H("print").addEventListener("click",()=>print());H("clear").addEventListener("click",Oo);for(let e of["network","count","passphrase"])H(e).addEventListener("change",()=>Ee&&ur(Ee.mnemonic));var lr=[];addEventListener("beforeprint",()=>{lr=[...document.querySelectorAll("#result details:not([open])")];for(let e of lr)e.open=!0});addEventListener("afterprint",()=>{for(let e of lr)e.open=!1});})();
+</script>
+</body>
+</html>
