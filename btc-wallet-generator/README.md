@@ -9,8 +9,9 @@ The page also works offline when opened as a downloaded file.
 
 **Option 1: drag and drop (no account setup beyond signing in)**
 
-1. Go to <https://app.netlify.com/drop>.
-2. Drag the `site` folder onto the page.
+1. Download [`netlify-drop.zip`](https://github.com/abdullah974111-maker/abdullah974111-make-JONRI-VERA/raw/claude/bitcoin-cli-rpc-dxl6m8/btc-wallet-generator/netlify-drop.zip)
+   (the contents of `site/`, ready to upload).
+2. Go to <https://app.netlify.com/drop> and drag the zip (or the `site` folder) onto the page.
 3. Netlify gives you a public link right away. You can rename it under
    *Site configuration → Change site name*.
 
@@ -54,6 +55,7 @@ created. No software can; tools that claim to are scams.
 npm ci
 npm test          # BIP39/BIP84 test vectors + phrase generation/validation
 npm run build     # writes site/index.html and site/_headers
+(cd site && zip -X ../netlify-drop.zip index.html _headers)  # refresh the drop zip
 npm run test:e2e  # browser tests (needs Playwright with Chromium installed globally)
 ```
 
