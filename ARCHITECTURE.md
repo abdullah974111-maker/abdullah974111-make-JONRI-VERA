@@ -280,9 +280,43 @@ User → Game Client → Game Engine → RNG → Calculate Result → Update Wal
 User → Withdrawal Request → Wallet Service → Admin Review → Payment Gateway → Bank → User Account
 ```
 
+## Implementation Status
+
+The diagrams above describe the target architecture. This repository currently
+implements a single-service slice of it, and the table below says which parts
+are real code. Treat anything marked *planned* as a design note, not a feature.
+
+| Area | Status | Where |
+|------|--------|-------|
+| Web client (lobby, tables, wallet, fairness) | **Built** | `frontend/` |
+| API gateway / service split | *Planned* — one Express app, routers per domain | `backend/src/routes/` |
+| Authentication (JWT + rotating refresh tokens) | **Built** | `backend/src/services/auth.service.js` |
+| Game engine (slots, roulette, dice, coinflip) | **Built**, server-authoritative | `backend/src/services/games/` |
+| RNG | **Built** — HMAC-SHA256 over a committed seed, publicly verifiable | `backend/src/services/rng.js` |
+| Wallet ledger | **Built** — BIGINT cents, idempotent, transactional | `backend/src/services/wallet.service.js` |
+| Payment gateways (Stripe, crypto) | *Planned* — deposits are simulated and dev-gated | — |
+| Withdrawal payouts | *Partial* — review queue built, no payout rail | `backend/src/routes/admin.routes.js` |
+| KYC/AML provider | *Partial* — submissions store a provider reference only | `backend/src/routes/users.routes.js` |
+| Responsible gaming (limits, self-exclusion) | **Built** | `backend/src/routes/users.routes.js` |
+| Audit log | **Built** for logins, withdrawals, KYC decisions, self-exclusion | `audit_log` table |
+| Live multiplayer feed | **Built** — WebSocket over a Redis channel | `backend/src/ws/` |
+| Mobile apps, admin dashboard UI | *Planned* | — |
+| Jackpots, rewards engine, tournaments | *Planned* | — |
+| Fraud detection, analytics warehouse | *Planned* | — |
+| Kubernetes, CDN, message queue | *Planned* — Docker Compose only today | `docker-compose.yml` |
+
+### Certification and licensing
+
+The RNG here is cryptographically secure and every round is replayable from a
+published commitment, which is the property players can check themselves. That
+is not the same as certification: operating for real money needs an accredited
+test house to audit the RNG and paytables, a licence in each jurisdiction
+served, and the AML/reporting programme that comes with it. None of that is in
+this repository.
+
 ---
 
-**Last Updated**: 2026-05-24  
+**Last Updated**: 2026-10-27  
 **Version**: 1.0  
-**Status**: Production Ready  
+**Status**: Reference implementation — runs end to end locally; see Implementation Status  
 **Author**: Royal Reels Casino Development Team
