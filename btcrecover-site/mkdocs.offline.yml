@@ -1,0 +1,11 @@
+# Offline/air-gapped build config for the BTCRecover docs site.
+#
+# Inherits the upstream mkdocs.yml and drops the git-committers plugin, which
+# needs GitHub API access to 3rdIteration/btcrecover to render per-page
+# contributor avatars. Without it the site builds clean under --strict.
+INHERIT: ./mkdocs.yml
+
+plugins:
+    - search
+    - autolinks
+    - include-markdown
