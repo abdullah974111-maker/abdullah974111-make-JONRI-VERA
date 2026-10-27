@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- default-src 'none' means this page cannot reach the network at all: no
+     fetch, no images, no fonts, no beacons. Keys typed here stay here. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>Bitcoin Key Calculator</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --border: #dce0e6;
+  --text: #15181d;
+  --text-dim: #5c6572;
+  --accent: #b45309;
+  --accent-soft: #fdf3e3;
+  --warn-bg: #fff6e6;
+  --warn-border: #e8c178;
+  --error: #b3261e;
+  --radius: 10px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --bg: #0f1216;
+    --surface: #171b21;
+    --surface-2: #1e242c;
+    --border: #2b323c;
+    --text: #e8ebef;
+    --text-dim: #9aa4b2;
+    --accent: #f0b429;
+    --accent-soft: #2a2213;
+    --warn-bg: #251d0e;
+    --warn-border: #6b5520;
+    --error: #ff8a80;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216;
+  --surface: #171b21;
+  --surface-2: #1e242c;
+  --border: #2b323c;
+  --text: #e8ebef;
+  --text-dim: #9aa4b2;
+  --accent: #f0b429;
+  --accent-soft: #2a2213;
+  --warn-bg: #251d0e;
+  --warn-border: #6b5520;
+  --error: #ff8a80;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.shell { max-width: 940px; margin: 0 auto; padding: 32px 16px 64px; }
+header h1 { margin: 0 0 4px; font-size: 1.6rem; letter-spacing: -0.01em; }
+header p.lede { margin: 0 0 20px; color: var(--text-dim); }
+.banner {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+}
+.banner strong { display: block; margin-bottom: 4px; }
+.banner ul { margin: 6px 0 0; padding-left: 20px; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+nav button {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+nav button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.controls {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 18px;
+  display: grid;
+  gap: 12px;
+}
+label.field { display: grid; gap: 5px; font-size: 0.82rem; color: var(--text-dim); }
+input[type="text"], input[type="number"], select, textarea {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 10px;
+  width: 100%;
+  min-width: 0;
+}
+textarea { resize: vertical; min-height: 64px; }
+select { font-family: inherit; }
+.inline { display: flex; gap: 10px; flex-wrap: wrap; }
+.inline > * { flex: 1 1 150px; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.buttons button {
+  appearance: none;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  border-radius: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.buttons button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
+.error { color: var(--error); font-size: 0.86rem; margin: 0 0 14px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 16px 14px;
+  margin-bottom: 14px;
+}
+.card h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  margin: 14px 0 10px;
+}
+.row { padding: 9px 0; border-top: 1px solid var(--border); }
+.row:first-of-type { border-top: none; }
+.row-label { display: flex; gap: 8px; align-items: baseline; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 4px; }
+.row-note { font-size: 0.72rem; color: var(--accent); }
+.row-value { display: flex; gap: 10px; align-items: flex-start; }
+.row-value code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.84rem; }
+.mono { font-family: var(--mono); }
+button.copy {
+  flex: 0 0 auto;
+  appearance: none;
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 4px 9px;
+}
+.placeholder, .parsed-note { color: var(--text-dim); font-size: 0.86rem; }
+.parsed-note { margin: 0 0 12px; }
+.scroll { overflow-x: auto; }
+table.derived { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+table.derived th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.derived td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.derived td.wrap { overflow-wrap: anywhere; }
+table.derived td.dim { color: var(--text-dim); }
+.prose { font-size: 0.9rem; }
+.prose h3 { margin: 22px 0 8px; font-size: 0.95rem; }
+.prose ul { padding-left: 20px; }
+.prose code { font-family: var(--mono); font-size: 0.84rem; }
+footer { margin-top: 32px; color: var(--text-dim); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <h1>Bitcoin Key Calculator</h1>
+  <p class="lede">Private key &rarr; public key &rarr; addresses, and BIP32 hierarchical derivation. Runs entirely in this page.</p>
+</header>
+
+<div class="banner">
+  <strong>Read this before you type a real key.</strong>
+  <ul>
+    <li>This page makes no network requests &mdash; its Content-Security-Policy is <code>default-src 'none'</code> &mdash; but a browser is still a poor place for a key that holds funds.</li>
+    <li>For anything real: save this file, disconnect the machine, then open it.</li>
+    <li>Keys generated here use <code>crypto.getRandomValues</code>. That is a proper CSPRNG, but a hardware wallet is still the better custodian.</li>
+  </ul>
+</div>
+
+<nav>
+  <button type="button" data-tab="single" class="active">Single key</button>
+  <button type="button" data-tab="hd">HD wallet (BIP32)</button>
+  <button type="button" data-tab="about">About</button>
+</nav>
+
+<div data-panel="single">
+  <div class="controls">
+    <label class="field">
+      Private key &mdash; 64 hex digits, a decimal integer, or WIF
+      <textarea id="key-input" spellcheck="false" autocomplete="off" placeholder="e.g. 0000...0001, or KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"></textarea>
+    </label>
+    <div class="inline">
+      <label class="field">
+        Network
+        <select id="key-network">
+          <option value="mainnet">mainnet</option>
+          <option value="testnet">testnet</option>
+        </select>
+      </label>
+    </div>
+    <div class="buttons">
+      <button type="button" class="primary" id="key-generate">Generate a random key</button>
+      <button type="button" id="key-clear">Clear</button>
+    </div>
+  </div>
+  <p class="error" id="key-error" hidden></p>
+  <div id="key-output"></div>
+</div>
+
+<div data-panel="hd" hidden>
+  <div class="controls">
+    <label class="field">
+      Seed (hex, 16&ndash;64 bytes)
+      <input type="text" id="hd-seed" spellcheck="false" autocomplete="off" placeholder="000102030405060708090a0b0c0d0e0f">
+    </label>
+    <label class="field">
+      &hellip; or an extended key (xprv / xpub / tprv / tpub) &mdash; takes precedence over the seed
+      <input type="text" id="hd-xkey" spellcheck="false" autocomplete="off" placeholder="xprv9s21ZrQH143K3...">
+    </label>
+    <div class="inline">
+      <label class="field">
+        Derivation path
+        <input type="text" id="hd-path" spellcheck="false" autocomplete="off" value="m/84'/0'/0'/0">
+      </label>
+      <label class="field">
+        Addresses
+        <input type="number" id="hd-count" min="1" max="50" value="5">
+      </label>
+      <label class="field">
+        Address type
+        <select id="hd-type">
+          <option value="auto">auto (from path)</option>
+          <option value="p2pkh">P2PKH</option>
+          <option value="p2sh-p2wpkh">P2SH-P2WPKH</option>
+          <option value="p2wpkh">P2WPKH</option>
+          <option value="p2tr">P2TR</option>
+        </select>
+      </label>
+      <label class="field">
+        Network
+        <select id="hd-network">
+          <option value="mainnet">mainnet</option>
+          <option value="testnet">testnet</option>
+        </select>
+      </label>
+    </div>
+    <div class="buttons">
+      <button type="button" class="primary" id="hd-generate">Generate a random seed</button>
+    </div>
+  </div>
+  <p class="error" id="hd-error" hidden></p>
+  <div id="hd-output"></div>
+</div>
+
+<div data-panel="about" hidden>
+  <section class="card prose">
+    <h3>What this calculates</h3>
+    <ul>
+      <li><strong>Private key</strong> in hex, decimal and WIF (compressed and uncompressed, mainnet and testnet).</li>
+      <li><strong>Public key</strong> as <code>k&middot;G</code> on secp256k1, in compressed and uncompressed form, with the raw point coordinates and HASH160.</li>
+      <li><strong>Addresses</strong>: P2PKH (BIP44), P2SH-P2WPKH (BIP49), P2WPKH (BIP84), P2TR (BIP86).</li>
+      <li><strong>BIP32</strong> master keys from a seed, extended key serialisation, hardened and normal child derivation, and watch-only derivation from an xpub.</li>
+    </ul>
+
+    <h3>What it deliberately does not do</h3>
+    <p>It will not take an address and search for the private key that controls it. "Key hunting", puzzle scanners and brute-force range searches have no use except spending coins that belong to someone else, and against a 256-bit keyspace they do not work regardless.</p>
+
+    <h3>How it is built</h3>
+    <ul>
+      <li>secp256k1 arithmetic in <code>BigInt</code>, affine coordinates.</li>
+      <li>SHA-256, SHA-512, HMAC-SHA512 from WebCrypto; RIPEMD-160 implemented directly, since WebCrypto omits it.</li>
+      <li>Base58Check, Bech32 and Bech32m written out, no dependencies.</li>
+      <li>Checked against BIP32 test vector 1, the BIP86 taproot vectors, the BIP173 segwit examples, the RIPEMD-160 reference vectors, and the long-standing key-of-1 addresses.</li>
+    </ul>
+
+    <h3>Verify it yourself</h3>
+    <p>Private key <code>1</code> must give P2PKH <code>1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH</code> compressed, <code>1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm</code> uncompressed, and P2WPKH <code>bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4</code>. Seed <code>000102030405060708090a0b0c0d0e0f</code> must give the BIP32 test vector 1 master xprv.</p>
+  </section>
+</div>
+
+<footer>No dependencies, no build output beyond this file, no network access. Save it and run it offline.</footer>
+</div>
+<script>
+/* ---- ripemd160.js ---- */
+// RIPEMD-160. Needed because WebCrypto does not implement it, and Bitcoin's
+// HASH160 = RIPEMD160(SHA256(x)) depends on it.
+
+const RL = [
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
+  3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12,
+  1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2,
+  4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13,
+];
+
+const RR = [
+  5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12,
+  6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2,
+  15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13,
+  8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14,
+  12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11,
+];
+
+const SL = [
+  11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,
+  7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,
+  11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5,
+  11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12,
+  9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6,
+];
+
+const SR = [
+  8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6,
+  9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11,
+  9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5,
+  15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8,
+  8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,
+];
+
+const KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
+const KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000];
+
+const rotl = (x, n) => ((x << n) | (x >>> (32 - n))) >>> 0;
+
+function f(j, x, y, z) {
+  if (j < 16) return x ^ y ^ z;
+  if (j < 32) return (x & y) | (~x & z);
+  if (j < 48) return (x | ~y) ^ z;
+  if (j < 64) return (x & z) | (y & ~z);
+  return x ^ (y | ~z);
+}
+
+function ripemd160(input) {
+  const msg = typeof input === 'string' ? new TextEncoder().encode(input) : input;
+
+  // Pad to a multiple of 64 bytes: 0x80, zeros, then the bit length LE.
+  const blocks = Math.floor((msg.length + 8) / 64) + 1;
+  const padded = new Uint8Array(blocks * 64);
+  padded.set(msg);
+  padded[msg.length] = 0x80;
+  const view = new DataView(padded.buffer);
+  const bits = msg.length * 8;
+  view.setUint32(padded.length - 8, bits >>> 0, true);
+  view.setUint32(padded.length - 4, Math.floor(bits / 0x100000000), true);
+
+  let h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
+
+  for (let b = 0; b < blocks; b++) {
+    const x = new Array(16);
+    for (let i = 0; i < 16; i++) x[i] = view.getUint32(b * 64 + i * 4, true);
+
+    let [al, bl, cl, dl, el] = h;
+    let [ar, br, cr, dr, er] = h;
+
+    for (let j = 0; j < 80; j++) {
+      const round = Math.floor(j / 16);
+
+      let t = (al + f(j, bl, cl, dl) + x[RL[j]] + KL[round]) >>> 0;
+      t = (rotl(t, SL[j]) + el) >>> 0;
+      al = el; el = dl; dl = rotl(cl, 10); cl = bl; bl = t;
+
+      t = (ar + f(79 - j, br, cr, dr) + x[RR[j]] + KR[round]) >>> 0;
+      t = (rotl(t, SR[j]) + er) >>> 0;
+      ar = er; er = dr; dr = rotl(cr, 10); cr = br; br = t;
+    }
+
+    h = [
+      (h[1] + cl + dr) >>> 0,
+      (h[2] + dl + er) >>> 0,
+      (h[3] + el + ar) >>> 0,
+      (h[4] + al + br) >>> 0,
+      (h[0] + bl + cr) >>> 0,
+    ];
+  }
+
+  const out = new Uint8Array(20);
+  const ov = new DataView(out.buffer);
+  for (let i = 0; i < 5; i++) ov.setUint32(i * 4, h[i], true);
+  return out;
+}
+
+/* ---- hashes.js ---- */
+// Hash helpers. Everything except RIPEMD-160 comes from WebCrypto, which is
+// available both in the browser (offline, no network) and in Node 18+.
+
+const subtle = globalThis.crypto.subtle;
+
+async function sha256(bytes) {
+  return new Uint8Array(await subtle.digest('SHA-256', bytes));
+}
+
+async function sha512(bytes) {
+  return new Uint8Array(await subtle.digest('SHA-512', bytes));
+}
+
+async function hash256(bytes) {
+  return sha256(await sha256(bytes));
+}
+
+async function hash160(bytes) {
+  return ripemd160(await sha256(bytes));
+}
+
+async function hmacSha512(key, data) {
+  const k = await subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+  return new Uint8Array(await subtle.sign('HMAC', k, data));
+}
+
+// BIP340 tagged hash: SHA256(SHA256(tag) || SHA256(tag) || msg).
+async function taggedHash(tag, msg) {
+  const tagHash = await sha256(new TextEncoder().encode(tag));
+  const buf = new Uint8Array(tagHash.length * 2 + msg.length);
+  buf.set(tagHash, 0);
+  buf.set(tagHash, tagHash.length);
+  buf.set(msg, tagHash.length * 2);
+  return sha256(buf);
+}
+
+/* ---- encoding.js ---- */
+// Hex, Base58Check and Bech32/Bech32m.
+
+function bytesToHex(bytes) {
+  let out = '';
+  for (const b of bytes) out += b.toString(16).padStart(2, '0');
+  return out;
+}
+
+function hexToBytes(hex) {
+  const clean = hex.replace(/^0x/i, '').trim();
+  if (clean.length % 2 !== 0) throw new Error('hex string has an odd length');
+  if (!/^[0-9a-f]*$/i.test(clean)) throw new Error('hex string has non-hex characters');
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function concatBytes(...parts) {
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const p of parts) { out.set(p, at); at += p.length; }
+  return out;
+}
+
+function bytesToBigInt(bytes) {
+  let n = 0n;
+  for (const b of bytes) n = (n << 8n) | BigInt(b);
+  return n;
+}
+
+function bigIntToBytes(n, length) {
+  const out = new Uint8Array(length);
+  let v = n;
+  for (let i = length - 1; i >= 0; i--) {
+    out[i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
+  if (v !== 0n) throw new Error(`value does not fit in ${length} bytes`);
+  return out;
+}
+
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+function base58Encode(bytes) {
+  let n = bytesToBigInt(bytes);
+  let out = '';
+  while (n > 0n) {
+    out = B58[Number(n % 58n)] + out;
+    n /= 58n;
+  }
+  for (const b of bytes) {
+    if (b !== 0) break;
+    out = '1' + out;
+  }
+  return out;
+}
+
+function base58Decode(str) {
+  let n = 0n;
+  for (const ch of str) {
+    const idx = B58.indexOf(ch);
+    if (idx < 0) throw new Error(`"${ch}" is not a Base58 character`);
+    n = n * 58n + BigInt(idx);
+  }
+  const body = [];
+  while (n > 0n) {
+    body.unshift(Number(n & 0xffn));
+    n >>= 8n;
+  }
+  let zeros = 0;
+  for (const ch of str) {
+    if (ch !== '1') break;
+    zeros++;
+  }
+  return new Uint8Array([...new Uint8Array(zeros), ...body]);
+}
+
+async function base58CheckEncode(payload) {
+  const checksum = (await hash256(payload)).slice(0, 4);
+  return base58Encode(concatBytes(payload, checksum));
+}
+
+async function base58CheckDecode(str) {
+  const raw = base58Decode(str);
+  if (raw.length < 5) throw new Error('Base58Check string is too short');
+  const payload = raw.slice(0, -4);
+  const checksum = raw.slice(-4);
+  const expected = (await hash256(payload)).slice(0, 4);
+  for (let i = 0; i < 4; i++) {
+    if (checksum[i] !== expected[i]) throw new Error('Base58Check checksum does not match');
+  }
+  return payload;
+}
+
+const BECH32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+const BECH32_CONST = 1;
+const BECH32M_CONST = 0x2bc830a3;
+
+function polymod(values) {
+  const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+  let chk = 1;
+  for (const v of values) {
+    const top = chk >> 25;
+    chk = ((chk & 0x1ffffff) << 5) ^ v;
+    for (let i = 0; i < 5; i++) if ((top >> i) & 1) chk ^= GEN[i];
+  }
+  return chk;
+}
+
+function hrpExpand(hrp) {
+  const out = [];
+  for (const ch of hrp) out.push(ch.charCodeAt(0) >> 5);
+  out.push(0);
+  for (const ch of hrp) out.push(ch.charCodeAt(0) & 31);
+  return out;
+}
+
+function convertBits(data, from, to, pad) {
+  let acc = 0;
+  let bits = 0;
+  const out = [];
+  const maxv = (1 << to) - 1;
+  for (const value of data) {
+    acc = (acc << from) | value;
+    bits += from;
+    while (bits >= to) {
+      bits -= to;
+      out.push((acc >> bits) & maxv);
+    }
+  }
+  if (pad) {
+    if (bits > 0) out.push((acc << (to - bits)) & maxv);
+  } else if (bits >= from || ((acc << (to - bits)) & maxv)) {
+    throw new Error('cannot convert bit groups');
+  }
+  return out;
+}
+
+// Segwit address. Witness version 0 uses Bech32, versions 1+ use Bech32m.
+function segwitAddress(hrp, version, program) {
+  const data = [version, ...convertBits(program, 8, 5, true)];
+  const constant = version === 0 ? BECH32_CONST : BECH32M_CONST;
+  const values = [...hrpExpand(hrp), ...data];
+  const mod = polymod([...values, 0, 0, 0, 0, 0, 0]) ^ constant;
+  const checksum = [];
+  for (let i = 0; i < 6; i++) checksum.push((mod >> (5 * (5 - i))) & 31);
+  return `${hrp}1${[...data, ...checksum].map((d) => BECH32[d]).join('')}`;
+}
+
+/* ---- secp256k1.js ---- */
+// secp256k1 point arithmetic over BigInt. Affine coordinates: slower than
+// Jacobian, but a key derivation only needs a few hundred point operations and
+// the shorter code is easier to audit.
+
+const CURVE_P = 2n ** 256n - 2n ** 32n - 977n;
+const CURVE_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+
+const G = {
+  x: 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n,
+  y: 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n,
+};
+
+const fieldMod = (a, m = CURVE_P) => ((a % m) + m) % m;
+
+function fieldInverse(a, m = CURVE_P) {
+  if (fieldMod(a, m) === 0n) throw new Error('zero has no modular inverse');
+  let [r0, r1] = [fieldMod(a, m), m];
+  let [s0, s1] = [1n, 0n];
+  while (r1 !== 0n) {
+    const q = r0 / r1;
+    [r0, r1] = [r1, r0 - q * r1];
+    [s0, s1] = [s1, s0 - q * s1];
+  }
+  return fieldMod(s0, m);
+}
+
+function powMod(base, exp, m) {
+  let result = 1n;
+  let b = fieldMod(base, m);
+  let e = exp;
+  while (e > 0n) {
+    if (e & 1n) result = (result * b) % m;
+    b = (b * b) % m;
+    e >>= 1n;
+  }
+  return result;
+}
+
+function pointDouble(p) {
+  if (p === null) return null;
+  if (p.y === 0n) return null;
+  const lambda = fieldMod(3n * p.x * p.x * fieldInverse(2n * p.y));
+  const x = fieldMod(lambda * lambda - 2n * p.x);
+  return { x, y: fieldMod(lambda * (p.x - x) - p.y) };
+}
+
+function pointAdd(p, q) {
+  if (p === null) return q;
+  if (q === null) return p;
+  if (p.x === q.x) return p.y === q.y ? pointDouble(p) : null;
+  const lambda = fieldMod((q.y - p.y) * fieldInverse(q.x - p.x));
+  const x = fieldMod(lambda * lambda - p.x - q.x);
+  return { x, y: fieldMod(lambda * (p.x - x) - p.y) };
+}
+
+function pointMultiply(k, point = G) {
+  let scalar = fieldMod(k, CURVE_N);
+  if (scalar === 0n) throw new Error('scalar must not be zero mod n');
+  let result = null;
+  let addend = point;
+  while (scalar > 0n) {
+    if (scalar & 1n) result = pointAdd(result, addend);
+    addend = pointDouble(addend);
+    scalar >>= 1n;
+  }
+  return result;
+}
+
+function isOnCurve(p) {
+  if (p === null) return false;
+  return fieldMod(p.y * p.y - p.x * p.x * p.x - 7n) === 0n;
+}
+
+function serializePoint(point, compressed = true) {
+  const x = point.x.toString(16).padStart(64, '0');
+  if (!compressed) return `04${x}${point.y.toString(16).padStart(64, '0')}`;
+  return `${point.y % 2n === 0n ? '02' : '03'}${x}`;
+}
+
+// BIP340 lift_x: recover the point with an even y from an x-only key.
+function liftX(x) {
+  if (x <= 0n || x >= CURVE_P) throw new Error('x is outside the field');
+  const ySq = fieldMod(x * x * x + 7n);
+  const y = powMod(ySq, (CURVE_P + 1n) / 4n, CURVE_P);
+  if (fieldMod(y * y) !== ySq) throw new Error('x is not on the curve');
+  return { x, y: y % 2n === 0n ? y : CURVE_P - y };
+}
+
+/* ---- btc-keys.js ---- */
+// High-level Bitcoin key derivation: private key -> public key -> addresses,
+// plus BIP32 hierarchical deterministic derivation.
+
+const NETWORKS = {
+  mainnet: {
+    name: 'mainnet',
+    wif: 0x80,
+    p2pkh: 0x00,
+    p2sh: 0x05,
+    hrp: 'bc',
+    xprv: 0x0488ade4,
+    xpub: 0x0488b21e,
+  },
+  testnet: {
+    name: 'testnet',
+    wif: 0xef,
+    p2pkh: 0x6f,
+    p2sh: 0xc4,
+    hrp: 'tb',
+    xprv: 0x04358394,
+    xpub: 0x043587cf,
+  },
+};
+
+function networkFor(name) {
+  const net = NETWORKS[name];
+  if (!net) throw new Error(`unknown network "${name}"`);
+  return net;
+}
+
+function randomPrivateKey() {
+  // Rejection sampling: a uniform 32-byte value can land outside [1, n-1].
+  for (let attempt = 0; attempt < 64; attempt++) {
+    const bytes = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(bytes);
+    const value = bytesToBigInt(bytes);
+    if (value >= 1n && value < CURVE_N) return bytes;
+  }
+  throw new Error('could not draw a key in range');
+}
+
+async function encodeWif(keyBytes, { compressed = true, network = 'mainnet' } = {}) {
+  const net = networkFor(network);
+  const parts = [new Uint8Array([net.wif]), keyBytes];
+  if (compressed) parts.push(new Uint8Array([0x01]));
+  return base58CheckEncode(concatBytes(...parts));
+}
+
+async function decodeWif(wif) {
+  const payload = await base58CheckDecode(wif);
+  const version = payload[0];
+  const network = Object.values(NETWORKS).find((n) => n.wif === version);
+  if (!network) throw new Error(`0x${version.toString(16)} is not a WIF version byte`);
+  if (payload.length === 34 && payload[33] === 0x01) {
+    return { key: payload.slice(1, 33), compressed: true, network: network.name };
+  }
+  if (payload.length === 33) {
+    return { key: payload.slice(1, 33), compressed: false, network: network.name };
+  }
+  throw new Error('WIF payload is not 33 or 34 bytes');
+}
+
+// Accepts raw hex, decimal, or WIF. WIF also carries the compression flag and
+// the network, so those are reported back and the caller can honour them.
+async function parsePrivateKey(input) {
+  const text = input.trim();
+  if (!text) throw new Error('enter a private key');
+
+  if (/^(0x)?[0-9a-f]{64}$/i.test(text)) {
+    const key = hexToBytes(text);
+    assertInRange(bytesToBigInt(key));
+    return { key, format: 'hex' };
+  }
+
+  if (/^[0-9]+$/.test(text)) {
+    const value = BigInt(text);
+    assertInRange(value);
+    return { key: bigIntToBytes(value, 32), format: 'decimal' };
+  }
+
+  if (/^[5KLc9]/.test(text)) {
+    const decoded = await decodeWif(text);
+    assertInRange(bytesToBigInt(decoded.key));
+    return { ...decoded, format: 'wif' };
+  }
+
+  throw new Error('not recognised as 64-digit hex, a decimal integer, or WIF');
+}
+
+function assertInRange(value) {
+  if (value < 1n) throw new Error('a private key must be at least 1');
+  if (value >= CURVE_N) throw new Error('a private key must be below the curve order n');
+}
+
+async function taprootOutputKey(internalPoint) {
+  const xOnly = bigIntToBytes(internalPoint.x, 32);
+  const tweak = bytesToBigInt(await taggedHash('TapTweak', xOnly));
+  if (tweak >= CURVE_N) throw new Error('tweak is out of range');
+  const even = liftX(internalPoint.x);
+  const output = pointAdd(even, pointMultiply(tweak));
+  if (output === null) throw new Error('tweaked key is the point at infinity');
+  return bigIntToBytes(output.x, 32);
+}
+
+// Everything derivable from one private key, for one network.
+async function describePrivateKey(keyBytes, { network = 'mainnet' } = {}) {
+  const net = networkFor(network);
+  const value = bytesToBigInt(keyBytes);
+  assertInRange(value);
+
+  const point = pointMultiply(value);
+  const compressedHex = serializePoint(point, true);
+  const uncompressedHex = serializePoint(point, false);
+  const compressedPub = hexToBytes(compressedHex);
+  const uncompressedPub = hexToBytes(uncompressedHex);
+
+  const compressedHash = await hash160(compressedPub);
+  const uncompressedHash = await hash160(uncompressedPub);
+
+  const redeemScript = concatBytes(new Uint8Array([0x00, 0x14]), compressedHash);
+
+  return {
+    network: net.name,
+    privateKey: {
+      hex: bytesToHex(keyBytes),
+      decimal: value.toString(10),
+      wifCompressed: await encodeWif(keyBytes, { compressed: true, network: net.name }),
+      wifUncompressed: await encodeWif(keyBytes, { compressed: false, network: net.name }),
+    },
+    publicKey: {
+      compressed: compressedHex,
+      uncompressed: uncompressedHex,
+      x: point.x.toString(16).padStart(64, '0'),
+      y: point.y.toString(16).padStart(64, '0'),
+      hash160Compressed: bytesToHex(compressedHash),
+      hash160Uncompressed: bytesToHex(uncompressedHash),
+    },
+    addresses: {
+      p2pkhCompressed: await base58CheckEncode(
+        concatBytes(new Uint8Array([net.p2pkh]), compressedHash),
+      ),
+      p2pkhUncompressed: await base58CheckEncode(
+        concatBytes(new Uint8Array([net.p2pkh]), uncompressedHash),
+      ),
+      p2shP2wpkh: await base58CheckEncode(
+        concatBytes(new Uint8Array([net.p2sh]), await hash160(redeemScript)),
+      ),
+      p2wpkh: segwitAddress(net.hrp, 0, compressedHash),
+      p2tr: segwitAddress(net.hrp, 1, await taprootOutputKey(point)),
+    },
+  };
+}
+
+async function addressFromPublicKey(publicKeyHex, type, network = 'mainnet') {
+  const net = networkFor(network);
+  const pub = hexToBytes(publicKeyHex);
+  const compressed = pub[0] === 0x02 || pub[0] === 0x03;
+
+  if (type !== 'p2pkh' && !compressed) {
+    throw new Error(`${type} requires a compressed public key`);
+  }
+
+  switch (type) {
+    case 'p2pkh':
+      return base58CheckEncode(concatBytes(new Uint8Array([net.p2pkh]), await hash160(pub)));
+    case 'p2sh-p2wpkh': {
+      const redeem = concatBytes(new Uint8Array([0x00, 0x14]), await hash160(pub));
+      return base58CheckEncode(concatBytes(new Uint8Array([net.p2sh]), await hash160(redeem)));
+    }
+    case 'p2wpkh':
+      return segwitAddress(net.hrp, 0, await hash160(pub));
+    case 'p2tr': {
+      const x = bytesToBigInt(pub.slice(1, 33));
+      return segwitAddress(net.hrp, 1, await taprootOutputKey(liftX(x)));
+    }
+    default:
+      throw new Error(`unknown address type "${type}"`);
+  }
+}
+
+/* ------------------------------- BIP32 -------------------------------- */
+
+const HARDENED = 0x80000000;
+
+async function nodeFromPrivate(privateKey, chainCode, depth, parentFingerprint, index) {
+  const value = bytesToBigInt(privateKey);
+  assertInRange(value);
+  const point = pointMultiply(value);
+  return {
+    privateKey,
+    publicKey: hexToBytes(serializePoint(point, true)),
+    point,
+    chainCode,
+    depth,
+    parentFingerprint,
+    index,
+  };
+}
+
+function nodeFromPublic(publicKey, point, chainCode, depth, parentFingerprint, index) {
+  return { privateKey: null, publicKey, point, chainCode, depth, parentFingerprint, index };
+}
+
+async function masterFromSeed(seed) {
+  if (seed.length < 16 || seed.length > 64) {
+    throw new Error('BIP32 seeds are 16 to 64 bytes (128 to 512 bits)');
+  }
+  const I = await hmacSha512(new TextEncoder().encode('Bitcoin seed'), seed);
+  return nodeFromPrivate(I.slice(0, 32), I.slice(32), 0, new Uint8Array(4), 0);
+}
+
+function randomSeed(bytes = 32) {
+  const seed = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(seed);
+  return seed;
+}
+
+async function fingerprint(node) {
+  return (await hash160(node.publicKey)).slice(0, 4);
+}
+
+function ser32(n) {
+  const out = new Uint8Array(4);
+  new DataView(out.buffer).setUint32(0, n >>> 0, false);
+  return out;
+}
+
+async function deriveChild(node, index) {
+  const hardened = index >= HARDENED;
+  if (hardened && !node.privateKey) {
+    throw new Error(`cannot derive hardened index ${index - HARDENED}' from a public key`);
+  }
+
+  const data = hardened
+    ? concatBytes(new Uint8Array([0]), node.privateKey, ser32(index))
+    : concatBytes(node.publicKey, ser32(index));
+
+  const I = await hmacSha512(node.chainCode, data);
+  const tweak = bytesToBigInt(I.slice(0, 32));
+  if (tweak >= CURVE_N) throw new Error('derived tweak is out of range; use the next index');
+
+  const parentFp = await fingerprint(node);
+
+  if (node.privateKey) {
+    const child = (tweak + bytesToBigInt(node.privateKey)) % CURVE_N;
+    if (child === 0n) throw new Error('derived key is zero; use the next index');
+    return nodeFromPrivate(bigIntToBytes(child, 32), I.slice(32), node.depth + 1, parentFp, index);
+  }
+
+  const point = pointAdd(pointMultiply(tweak), node.point);
+  if (point === null) throw new Error('derived key is the point at infinity; use the next index');
+  return nodeFromPublic(
+    hexToBytes(serializePoint(point, true)),
+    point,
+    I.slice(32),
+    node.depth + 1,
+    parentFp,
+    index,
+  );
+}
+
+function parsePath(path) {
+  const trimmed = path.trim().replace(/^m\/?/i, '');
+  if (!trimmed) return [];
+  return trimmed.split('/').map((part) => {
+    const match = /^(\d+)(['h])?$/i.exec(part.trim());
+    if (!match) throw new Error(`"${part}" is not a valid path element`);
+    const index = Number(match[1]);
+    if (index >= HARDENED) throw new Error(`index ${index} is too large`);
+    return match[2] ? index + HARDENED : index;
+  });
+}
+
+async function derivePath(node, path) {
+  let current = node;
+  for (const index of parsePath(path)) current = await deriveChild(current, index);
+  return current;
+}
+
+function formatPath(indices) {
+  return ['m', ...indices.map((i) => (i >= HARDENED ? `${i - HARDENED}'` : `${i}`))].join('/');
+}
+
+async function serializeExtendedKey(node, { network = 'mainnet', private: wantPrivate } = {}) {
+  const net = networkFor(network);
+  if (wantPrivate && !node.privateKey) throw new Error('this node has no private key');
+  const keyData = wantPrivate
+    ? concatBytes(new Uint8Array([0]), node.privateKey)
+    : node.publicKey;
+  const version = new Uint8Array(4);
+  new DataView(version.buffer).setUint32(0, wantPrivate ? net.xprv : net.xpub, false);
+  return base58CheckEncode(
+    concatBytes(
+      version,
+      new Uint8Array([node.depth]),
+      node.parentFingerprint,
+      ser32(node.index),
+      node.chainCode,
+      keyData,
+    ),
+  );
+}
+
+async function parseExtendedKey(text) {
+  const payload = await base58CheckDecode(text.trim());
+  if (payload.length !== 78) throw new Error('an extended key is 78 bytes before the checksum');
+  const version = new DataView(payload.buffer, payload.byteOffset).getUint32(0, false);
+  const net = Object.values(NETWORKS).find((n) => n.xprv === version || n.xpub === version);
+  if (!net) throw new Error(`0x${version.toString(16)} is not an xprv/xpub version`);
+
+  const depth = payload[4];
+  const parentFingerprint = payload.slice(5, 9);
+  const index = new DataView(payload.buffer, payload.byteOffset).getUint32(9, false);
+  const chainCode = payload.slice(13, 45);
+  const keyData = payload.slice(45, 78);
+
+  if (version === net.xprv) {
+    if (keyData[0] !== 0) throw new Error('private extended keys are padded with a zero byte');
+    const node = await nodeFromPrivate(
+      keyData.slice(1),
+      chainCode,
+      depth,
+      parentFingerprint,
+      index,
+    );
+    return { node, network: net.name, hasPrivateKey: true };
+  }
+
+  if (keyData[0] !== 0x02 && keyData[0] !== 0x03) {
+    throw new Error('public extended keys start with 0x02 or 0x03');
+  }
+  // liftX returns the even-y point; the prefix says which parity we want.
+  const even = liftX(bytesToBigInt(keyData.slice(1)));
+  const resolved = keyData[0] === 0x03 ? { x: even.x, y: CURVE_P - even.y } : even;
+  return {
+    node: nodeFromPublic(keyData, resolved, chainCode, depth, parentFingerprint, index),
+    network: net.name,
+    hasPrivateKey: false,
+  };
+}
+
+// Address type conventions, by BIP43 purpose.
+const PURPOSE_ADDRESS_TYPES = {
+  44: 'p2pkh',
+  49: 'p2sh-p2wpkh',
+  84: 'p2wpkh',
+  86: 'p2tr',
+};
+
+function addressTypeForPath(path) {
+  const indices = parsePath(path);
+  if (!indices.length) return 'p2pkh';
+  const purpose = indices[0] >= HARDENED ? indices[0] - HARDENED : indices[0];
+  return PURPOSE_ADDRESS_TYPES[purpose] ?? 'p2pkh';
+}
+
+/* ---- ui.js ---- */
+// Browser interface. No network calls: the page is meant to be saved and opened
+// from disk, ideally on a machine that is offline.
+
+const uiEl = (tag, className, text) => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+const uiFind = (id) => document.getElementById(id);
+
+function uiRow(label, value, { mono = true, note } = {}) {
+  const row = uiEl('div', 'row');
+  const head = uiEl('div', 'row-label');
+  head.append(uiEl('span', null, label));
+  if (note) head.append(uiEl('span', 'row-note', note));
+  row.append(head);
+
+  const body = uiEl('div', 'row-value');
+  const text = uiEl('code', mono ? 'mono' : null, value);
+  body.append(text);
+
+  const copy = uiEl('button', 'copy', 'Copy');
+  copy.type = 'button';
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      copy.textContent = 'Copied';
+    } catch {
+      // Clipboard access can be denied; selecting the text still works.
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      copy.textContent = 'Selected';
+    }
+    setTimeout(() => { copy.textContent = 'Copy'; }, 1400);
+  });
+  body.append(copy);
+
+  row.append(body);
+  return row;
+}
+
+function uiCard(title, rows) {
+  const card = uiEl('section', 'card');
+  card.append(uiEl('h3', null, title));
+  for (const row of rows) card.append(row);
+  return card;
+}
+
+function uiSetError(id, message) {
+  const box = uiFind(id);
+  box.textContent = message ?? '';
+  box.hidden = !message;
+}
+
+/* ----------------------------- single key ----------------------------- */
+
+let uiSingleTimer = null;
+
+async function uiRenderSingle() {
+  const input = uiFind('key-input').value;
+  const out = uiFind('key-output');
+  out.replaceChildren();
+
+  if (!input.trim()) {
+    uiSetError('key-error', null);
+    out.append(uiEl('p', 'placeholder', 'Enter a private key, or generate one.'));
+    return;
+  }
+
+  let network = uiFind('key-network').value;
+
+  try {
+    const parsed = await parsePrivateKey(input);
+    // A WIF encodes its own network; honour it and tell the user.
+    const wifNetwork = parsed.format === 'wif' ? parsed.network : null;
+    if (wifNetwork) network = wifNetwork;
+
+    const described = await describePrivateKey(parsed.key, { network });
+    uiSetError('key-error', null);
+
+    const notes = [`read as ${parsed.format}`];
+    if (wifNetwork) notes.push(`WIF says ${wifNetwork}`);
+    if (parsed.format === 'wif') {
+      notes.push(parsed.compressed ? 'compressed flag set' : 'uncompressed flag set');
+    }
+    out.append(uiEl('p', 'parsed-note', notes.join(' · ')));
+
+    out.append(uiCard('Private key', [
+      uiRow('Hex (32 bytes)', described.privateKey.hex),
+      uiRow('Decimal', described.privateKey.decimal),
+      uiRow('WIF', described.privateKey.wifCompressed, { note: 'compressed' }),
+      uiRow('WIF', described.privateKey.wifUncompressed, { note: 'uncompressed' }),
+    ]));
+
+    out.append(uiCard('Public key', [
+      uiRow('Compressed (33 bytes)', described.publicKey.compressed),
+      uiRow('Uncompressed (65 bytes)', described.publicKey.uncompressed),
+      uiRow('Point x', described.publicKey.x),
+      uiRow('Point y', described.publicKey.y),
+      uiRow('HASH160', described.publicKey.hash160Compressed, { note: 'of compressed key' }),
+    ]));
+
+    out.append(uiCard('Addresses', [
+      uiRow('P2PKH', described.addresses.p2pkhCompressed, { note: 'compressed · BIP44' }),
+      uiRow('P2PKH', described.addresses.p2pkhUncompressed, { note: 'uncompressed · legacy' }),
+      uiRow('P2SH-P2WPKH', described.addresses.p2shP2wpkh, { note: 'nested segwit · BIP49' }),
+      uiRow('P2WPKH', described.addresses.p2wpkh, { note: 'native segwit · BIP84' }),
+      uiRow('P2TR', described.addresses.p2tr, { note: 'taproot · BIP86' }),
+    ]));
+  } catch (error) {
+    uiSetError('key-error', error.message);
+    out.append(uiEl('p', 'placeholder', 'Nothing to show yet.'));
+  }
+}
+
+function uiQueueSingle() {
+  clearTimeout(uiSingleTimer);
+  uiSingleTimer = setTimeout(uiRenderSingle, 120);
+}
+
+/* ------------------------------ HD wallet ----------------------------- */
+
+async function uiRootNode() {
+  const extended = uiFind('hd-xkey').value.trim();
+  if (extended) {
+    const { node, network, hasPrivateKey } = await parseExtendedKey(extended);
+    return { node, network, hasPrivateKey, source: 'extended key' };
+  }
+
+  const seedHex = uiFind('hd-seed').value.trim();
+  if (!seedHex) return null;
+
+  const node = await masterFromSeed(hexToBytes(seedHex));
+  return {
+    node,
+    network: uiFind('hd-network').value,
+    hasPrivateKey: true,
+    source: 'seed',
+  };
+}
+
+async function uiRenderHd() {
+  const out = uiFind('hd-output');
+  out.replaceChildren();
+
+  let root;
+  try {
+    root = await uiRootNode();
+  } catch (error) {
+    uiSetError('hd-error', error.message);
+    return;
+  }
+
+  if (!root) {
+    uiSetError('hd-error', null);
+    out.append(uiEl('p', 'placeholder', 'Enter a seed or an extended key, or generate a seed.'));
+    return;
+  }
+
+  const path = uiFind('hd-path').value.trim() || 'm';
+  const count = Math.min(Math.max(Number(uiFind('hd-count').value) || 1, 1), 50);
+
+  try {
+    const { node, network, hasPrivateKey } = root;
+
+    const masterRows = [];
+    if (hasPrivateKey) {
+      masterRows.push(uiRow(
+        node.depth === 0 ? 'Master xprv' : 'Extended private key',
+        await serializeExtendedKey(node, { network, private: true }),
+      ));
+    }
+    masterRows.push(uiRow(
+      node.depth === 0 ? 'Master xpub' : 'Extended public key',
+      await serializeExtendedKey(node, { network, private: false }),
+    ));
+    masterRows.push(uiRow('Depth', String(node.depth), { mono: false }));
+    out.append(uiCard(`Root (${root.source}, ${network})`, masterRows));
+
+    const account = await derivePath(node, path);
+    if (path !== 'm') {
+      const accountRows = [];
+      if (account.privateKey) {
+        accountRows.push(uiRow(
+          'xprv',
+          await serializeExtendedKey(account, { network, private: true }),
+        ));
+      }
+      accountRows.push(uiRow(
+        'xpub',
+        await serializeExtendedKey(account, { network, private: false }),
+      ));
+      out.append(uiCard(`At ${path}`, accountRows));
+    }
+
+    const type = uiFind('hd-type').value === 'auto'
+      ? addressTypeForPath(path)
+      : uiFind('hd-type').value;
+
+    const table = uiEl('table', 'derived');
+    const headRow = uiEl('tr');
+    for (const column of ['Path', `Address (${type})`, 'Public key', 'WIF']) {
+      headRow.append(uiEl('th', null, column));
+    }
+    const thead = uiEl('thead');
+    thead.append(headRow);
+    table.append(thead);
+
+    const body = uiEl('tbody');
+    for (let i = 0; i < count; i++) {
+      const child = await deriveChild(account, i);
+      const pubHex = bytesToHex(child.publicKey);
+      const tr = uiEl('tr');
+      tr.append(uiEl('td', 'mono', `${path === 'm' ? 'm' : path}/${i}`));
+      tr.append(uiEl('td', 'mono wrap', await addressFromPublicKey(pubHex, type, network)));
+      tr.append(uiEl('td', 'mono wrap dim', pubHex));
+      tr.append(uiEl('td', 'mono wrap dim', child.privateKey
+        ? await encodeWif(child.privateKey, { compressed: true, network })
+        : '—'));
+      body.append(tr);
+    }
+    table.append(body);
+
+    const wrap = uiEl('section', 'card');
+    wrap.append(uiEl('h3', null, 'Derived addresses'));
+    const scroll = uiEl('div', 'scroll');
+    scroll.append(table);
+    wrap.append(scroll);
+    out.append(wrap);
+
+    uiSetError('hd-error', null);
+  } catch (error) {
+    uiSetError('hd-error', error.message);
+  }
+}
+
+/* ------------------------------- wiring ------------------------------- */
+
+function uiInit() {
+  for (const tab of document.querySelectorAll('[data-tab]')) {
+    tab.addEventListener('click', () => {
+      for (const other of document.querySelectorAll('[data-tab]')) {
+        other.classList.toggle('active', other === tab);
+      }
+      for (const panel of document.querySelectorAll('[data-panel]')) {
+        panel.hidden = panel.dataset.panel !== tab.dataset.tab;
+      }
+    });
+  }
+
+  uiFind('key-input').addEventListener('input', uiQueueSingle);
+  uiFind('key-network').addEventListener('change', uiRenderSingle);
+  uiFind('key-generate').addEventListener('click', () => {
+    uiFind('key-input').value = bytesToHex(randomPrivateKey());
+    uiRenderSingle();
+  });
+  uiFind('key-clear').addEventListener('click', () => {
+    uiFind('key-input').value = '';
+    uiRenderSingle();
+  });
+
+  for (const id of ['hd-seed', 'hd-xkey', 'hd-path', 'hd-count']) {
+    uiFind(id).addEventListener('input', () => {
+      clearTimeout(uiSingleTimer);
+      uiSingleTimer = setTimeout(uiRenderHd, 150);
+    });
+  }
+  for (const id of ['hd-network', 'hd-type']) {
+    uiFind(id).addEventListener('change', uiRenderHd);
+  }
+  uiFind('hd-generate').addEventListener('click', () => {
+    uiFind('hd-seed').value = bytesToHex(randomSeed(32));
+    uiFind('hd-xkey').value = '';
+    uiRenderHd();
+  });
+
+  uiRenderSingle();
+  uiRenderHd();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', uiInit);
+} else {
+  uiInit();
+}
+</script>
+</body>
+</html>

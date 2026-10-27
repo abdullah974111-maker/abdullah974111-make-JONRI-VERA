@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- default-src 'none' means this page cannot reach the network at all: no
+     fetch, no images, no fonts, no beacons. Keys typed here stay here. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>Bitcoin Key Calculator</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --border: #dce0e6;
+  --text: #15181d;
+  --text-dim: #5c6572;
+  --accent: #b45309;
+  --accent-soft: #fdf3e3;
+  --warn-bg: #fff6e6;
+  --warn-border: #e8c178;
+  --error: #b3261e;
+  --radius: 10px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --bg: #0f1216;
+    --surface: #171b21;
+    --surface-2: #1e242c;
+    --border: #2b323c;
+    --text: #e8ebef;
+    --text-dim: #9aa4b2;
+    --accent: #f0b429;
+    --accent-soft: #2a2213;
+    --warn-bg: #251d0e;
+    --warn-border: #6b5520;
+    --error: #ff8a80;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216;
+  --surface: #171b21;
+  --surface-2: #1e242c;
+  --border: #2b323c;
+  --text: #e8ebef;
+  --text-dim: #9aa4b2;
+  --accent: #f0b429;
+  --accent-soft: #2a2213;
+  --warn-bg: #251d0e;
+  --warn-border: #6b5520;
+  --error: #ff8a80;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.shell { max-width: 940px; margin: 0 auto; padding: 32px 16px 64px; }
+header h1 { margin: 0 0 4px; font-size: 1.6rem; letter-spacing: -0.01em; }
+header p.lede { margin: 0 0 20px; color: var(--text-dim); }
+.banner {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+}
+.banner strong { display: block; margin-bottom: 4px; }
+.banner ul { margin: 6px 0 0; padding-left: 20px; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+nav button {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+nav button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.controls {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 18px;
+  display: grid;
+  gap: 12px;
+}
+label.field { display: grid; gap: 5px; font-size: 0.82rem; color: var(--text-dim); }
+input[type="text"], input[type="number"], select, textarea {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 10px;
+  width: 100%;
+  min-width: 0;
+}
+textarea { resize: vertical; min-height: 64px; }
+select { font-family: inherit; }
+.inline { display: flex; gap: 10px; flex-wrap: wrap; }
+.inline > * { flex: 1 1 150px; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.buttons button {
+  appearance: none;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  border-radius: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.buttons button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
+.error { color: var(--error); font-size: 0.86rem; margin: 0 0 14px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 16px 14px;
+  margin-bottom: 14px;
+}
+.card h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  margin: 14px 0 10px;
+}
+.row { padding: 9px 0; border-top: 1px solid var(--border); }
+.row:first-of-type { border-top: none; }
+.row-label { display: flex; gap: 8px; align-items: baseline; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 4px; }
+.row-note { font-size: 0.72rem; color: var(--accent); }
+.row-value { display: flex; gap: 10px; align-items: flex-start; }
+.row-value code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.84rem; }
+.mono { font-family: var(--mono); }
+button.copy {
+  flex: 0 0 auto;
+  appearance: none;
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 4px 9px;
+}
+.placeholder, .parsed-note { color: var(--text-dim); font-size: 0.86rem; }
+.parsed-note { margin: 0 0 12px; }
+.scroll { overflow-x: auto; }
+table.derived { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+table.derived th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.derived td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.derived td.wrap { overflow-wrap: anywhere; }
+table.derived td.dim { color: var(--text-dim); }
+.prose { font-size: 0.9rem; }
+.prose h3 { margin: 22px 0 8px; font-size: 0.95rem; }
+.prose ul { padding-left: 20px; }
+.prose code { font-family: var(--mono); font-size: 0.84rem; }
+footer { margin-top: 32px; color: var(--text-dim); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <h1>Bitcoin Key Calculator</h1>
+  <p class="lede">Private key &rarr; public key &rarr; addresses, and BIP32 hierarchical derivation. Runs entirely in this page.</p>
+</header>
+
+<div class="banner">
+  <strong>Read this before you type a real key.</strong>
+  <ul>
+    <li>This page makes no network requests &mdash; its Content-Security-Policy is <code>default-src 'none'</code> &mdash; but a browser is still a poor place for a key that holds funds.</li>
+    <li>For anything real: save this file, disconnect the machine, then open it.</li>
+    <li>Keys generated here use <code>crypto.getRandomValues</code>. That is a proper CSPRNG, but a hardware wallet is still the better custodian.</li>
+  </ul>
+</div>
+
+<nav>
+  <button type="button" data-tab="single" class="active">Single key</button>
+  <button type="button" data-tab="hd">HD wallet (BIP32)</button>
+  <button type="button" data-tab="about">About</button>
+</nav>
+
+<div data-panel="single">
+  <div class="controls">
+    <label class="field">
+      Private key &mdash; 64 hex digits, a decimal integer, or WIF
+      <textarea id="key-input" spellcheck="false" autocomplete="off" placeholder="e.g. 0000...0001, or KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"></textarea>
+    </label>
+    <div class="inline">
+      <label class="field">
+        Network
+        <select id="key-network">
+          <option value="mainnet">mainnet</option>
+          <option value="testnet">testnet</option>
+        </select>
+      </label>
+    </div>
+    <div class="buttons">
+      <button type="button" class="primary" id="key-generate">Generate a random key</button>
+      <button type="button" id="key-clear">Clear</button>
+    </div>
+  </div>
+  <p class="error" id="key-error" hidden></p>
+  <div id="key-output"></div>
+</div>
+
+<div data-panel="hd" hidden>
+  <div class="controls">
+    <label class="field">
+      Seed (hex, 16&ndash;64 bytes)
+      <input type="text" id="hd-seed" spellcheck="false" autocomplete="off" placeholder="000102030405060708090a0b0c0d0e0f">
+    </label>
+    <label class="field">
+      &hellip; or an extended key (xprv / xpub / tprv / tpub) &mdash; takes precedence over the seed
+      <input type="text" id="hd-xkey" spellcheck="false" autocomplete="off" placeholder="xprv9s21ZrQH143K3...">
+    </label>
+    <div class="inline">
+      <label class="field">
+        Derivation path
+        <input type="text" id="hd-path" spellcheck="false" autocomplete="off" value="m/84'/0'/0'/0">
+      </label>
+      <label class="field">
+        Addresses
+        <input type="number" id="hd-count" min="1" max="50" value="5">
+      </label>
+      <label class="field">
+        Address type
+        <select id="hd-type">
+          <option value="auto">auto (from path)</option>
+          <option value="p2pkh">P2PKH</option>
+          <option value="p2sh-p2wpkh">P2SH-P2WPKH</option>
+          <option value="p2wpkh">P2WPKH</option>
+          <option value="p2tr">P2TR</option>
+        </select>
+      </label>
+      <label class="field">
+        Network
+        <select id="hd-network">
+          <option value="mainnet">mainnet</option>
+          <option value="testnet">testnet</option>
+        </select>
+      </label>
+    </div>
+    <div class="buttons">
+      <button type="button" class="primary" id="hd-generate">Generate a random seed</button>
+    </div>
+  </div>
+  <p class="error" id="hd-error" hidden></p>
+  <div id="hd-output"></div>
+</div>
+
+<div data-panel="about" hidden>
+  <section class="card prose">
+    <h3>What this calculates</h3>
+    <ul>
+      <li><strong>Private key</strong> in hex, decimal and WIF (compressed and uncompressed, mainnet and testnet).</li>
+      <li><strong>Public key</strong> as <code>k&middot;G</code> on secp256k1, in compressed and uncompressed form, with the raw point coordinates and HASH160.</li>
+      <li><strong>Addresses</strong>: P2PKH (BIP44), P2SH-P2WPKH (BIP49), P2WPKH (BIP84), P2TR (BIP86).</li>
+      <li><strong>BIP32</strong> master keys from a seed, extended key serialisation, hardened and normal child derivation, and watch-only derivation from an xpub.</li>
+    </ul>
+
+    <h3>What it deliberately does not do</h3>
+    <p>It will not take an address and search for the private key that controls it. "Key hunting", puzzle scanners and brute-force range searches have no use except spending coins that belong to someone else, and against a 256-bit keyspace they do not work regardless.</p>
+
+    <h3>How it is built</h3>
+    <ul>
+      <li>secp256k1 arithmetic in <code>BigInt</code>, affine coordinates.</li>
+      <li>SHA-256, SHA-512, HMAC-SHA512 from WebCrypto; RIPEMD-160 implemented directly, since WebCrypto omits it.</li>
+      <li>Base58Check, Bech32 and Bech32m written out, no dependencies.</li>
+      <li>Checked against BIP32 test vector 1, the BIP86 taproot vectors, the BIP173 segwit examples, the RIPEMD-160 reference vectors, and the long-standing key-of-1 addresses.</li>
+    </ul>
+
+    <h3>Verify it yourself</h3>
+    <p>Private key <code>1</code> must give P2PKH <code>1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH</code> compressed, <code>1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm</code> uncompressed, and P2WPKH <code>bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4</code>. Seed <code>000102030405060708090a0b0c0d0e0f</code> must give the BIP32 test vector 1 master xprv.</p>
+  </section>
+</div>
+
+<footer>No dependencies, no build output beyond this file, no network access. Save it and run it offline.</footer>
+</div>
+<script>
+/*BUNDLE*/
+</script>
+</body>
+</html>
