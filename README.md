@@ -1,7 +1,20 @@
-# BTCRecover documentation site
+# BTCRecover
 
-Build tooling for the [BTCRecover](https://github.com/3rdIteration/btcrecover)
-documentation site.
+Tooling for [BTCRecover](https://github.com/3rdIteration/btcrecover), an
+open-source recovery tool for wallet passwords and seed phrases.
+
+- [`btcrecover-tool/`](btcrecover-tool/README.md) — installs the tool and runs it
+- [`btcrecover-site/`](btcrecover-site/README.md) — builds its documentation site
+
+## Run the tool
+
+```bash
+./btcrecover-tool/setup.sh            # install into an isolated venv
+./btcrecover-tool/btcr btcrecover.py  --help
+./btcrecover-tool/btcr seedrecover.py --help
+```
+
+## Build the docs site
 
 ```bash
 ./btcrecover-site/build.sh            # clone (or update) upstream, then build

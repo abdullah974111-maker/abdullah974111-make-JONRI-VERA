@@ -1,3 +1,6 @@
 # Upstream BTCRecover clone and docs build artifacts (see btcrecover-site/)
 /btcrecover/
 btcrecover-site/.venv/
+
+# BTCRecover tool venv (see btcrecover-tool/)
+btcrecover-tool/.venv/
