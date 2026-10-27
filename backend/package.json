@@ -1,0 +1,35 @@
+{
+  "name": "royal-reels-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Royal Reels Casino backend API",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node src/db/migrate.js",
+    "seed:admin": "node src/scripts/seed-admin.js",
+    "seed:games": "node src/scripts/seed-games.js",
+    "seed:wallets": "node src/scripts/seed-wallets.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "pino": "^9.3.2",
+    "pino-http": "^10.2.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  }
+}
