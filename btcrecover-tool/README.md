@@ -55,8 +55,11 @@ Python 3.13.17, upstream commit `1457088`, `secp256k1 backend: coincurve`
 - **Real recovery**: against the bundled `bitcoincore-wallet.dat`, with the
   correct password placed among decoys in a password list, BTCRecover returned
   `Password found: 'btcr-test-password'`
-- Upstream's own suite runs via `./btcr run-all-tests.py` (slow — it covers
-  every wallet type and altcoin derivation path)
+- Upstream's own suite, `./btcr run-all-tests.py`: **761 passed, 69 skipped,
+  0 failures**, exit 0. The skips are all tests that scan the host for
+  installed wallet software and skip when none is present — correct for a
+  bare environment. Slow: it covers every wallet type and altcoin derivation
+  path.
 
 ## Choosing a Python version
 
