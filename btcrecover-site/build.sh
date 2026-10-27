@@ -39,17 +39,25 @@ echo "==> Generating docs/Benchmarks.md"
 
 # 4. Build. mkdocs.offline.yml inherits upstream mkdocs.yml and drops the
 #    git-committers plugin, which needs GitHub API access to the upstream repo.
-#    Set USE_UPSTREAM_CONFIG=1 (and MKDOCS_GIT_COMMITTERS_APIKEY) to keep it.
+#    Set USE_UPSTREAM_CONFIG=1 (with MKDOCS_GIT_COMMITTERS_APIKEY) to keep it.
 cp "$HERE/mkdocs.offline.yml" "$CLONE_DIR/mkdocs.offline.yml"
-CONFIG="mkdocs.offline.yml"
-BUILD_ARGS=(--strict)
+
 if [ "${USE_UPSTREAM_CONFIG:-0}" = "1" ]; then
     CONFIG="mkdocs.yml"
-    BUILD_ARGS=()   # git-committers errors are fatal under --strict without a token
+else
+    CONFIG="mkdocs.offline.yml"
 fi
 
+# Each branch spells out its own flags. Collecting them in an array would read
+# better, but expanding an empty array under `set -u` fails on bash 3.2, which
+# is still the stock /bin/bash on macOS.
 echo "==> Building site with $CONFIG"
-( cd "$CLONE_DIR" && "$VENV_DIR/bin/mkdocs" build "${BUILD_ARGS[@]}" -f "$CONFIG" )
+if [ "$CONFIG" = "mkdocs.yml" ]; then
+    # git-committers errors are fatal under --strict without a usable token.
+    ( cd "$CLONE_DIR" && "$VENV_DIR/bin/mkdocs" build -f "$CONFIG" )
+else
+    ( cd "$CLONE_DIR" && "$VENV_DIR/bin/mkdocs" build --strict -f "$CONFIG" )
+fi
 echo "==> Site built at $CLONE_DIR/site"
 
 if [ "${1:-}" = "--serve" ]; then

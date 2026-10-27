@@ -43,11 +43,28 @@ USE_UPSTREAM_CONFIG=1 MKDOCS_GIT_COMMITTERS_APIKEY=<github-token> ./build.sh
 
 ## Verified build
 
-34 HTML pages, 117 files, 6.1 MB, clean `--strict` exit. Upstream commit
-`1457088` ("Make secp256k1 backend pluggable"). Two non-fatal upstream notes
-remain, both pre-existing: `Usage_Examples/basic_wallet_scanning.md` is not in
-the nav, and `INSTALL.md` links a `#secp256k1-backends-...` anchor that does
-not exist on that page.
+Built from a clean clone and a fresh venv, reproducing identical output twice.
+Upstream commit `1457088` ("Make secp256k1 backend pluggable").
+
+- 34 HTML pages, 117 files, 6.1 MB, clean `--strict` exit
+- 1527 internal links and 203 local asset references checked: none broken
+- Served over HTTP: `/`, `/INSTALL/`, `/Benchmarks/` and
+  `/search/search_index.json` all return 200, nav renders
+- `build.sh` passes `shellcheck` 0.11.0
+
+### Known upstream quirks
+
+None of these are introduced by this build, and none are fatal:
+
+- `Usage_Examples/basic_wallet_scanning.md` exists in `docs/` but is absent
+  from the nav, so it builds as an orphan page.
+- `INSTALL.md` links an anchor `#secp256k1-backends-coincurve--wallycore--pure-python`
+  that does not exist on that page.
+- Two non-page files land in the output because they sit inside `docs/`:
+  `Benchmarks.md.template`, and `mkdocs_overrides/main.html` — the latter is
+  the theme override, copied verbatim, so it is served with its Jinja
+  (`{{ user.repos }}`) unrendered. Fixing either means moving files upstream
+  out of `docs/`, so this build leaves them alone.
 
 Upstream docs are also hosted at <https://btcrecover.readthedocs.io>.
 BTCRecover is GPL-2.0; this directory only contains build tooling.
