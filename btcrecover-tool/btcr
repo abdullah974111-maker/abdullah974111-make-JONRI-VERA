@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# Run a BTCRecover entry point inside the venv built by setup.sh.
+#
+#   ./btcr btcrecover.py  --wallet wallet.dat --passwordlist list.txt
+#   ./btcr seedrecover.py --wallet wallet.dat
+#
+# The working directory is left alone, so relative paths you pass for wallets
+# and lists resolve against where you invoked this, not against the clone.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLONE_DIR="${CLONE_DIR:-$HERE/../btcrecover}"
+VENV_DIR="${VENV_DIR:-$HERE/.venv}"
+
+if [ ! -x "$VENV_DIR/bin/python" ]; then
+    echo "No venv at $VENV_DIR — run $HERE/setup.sh first." >&2
+    exit 1
+fi
+
+if [ "$#" -eq 0 ]; then
+    echo "Usage: $(basename "$0") <entry-point.py> [args...]" >&2
+    echo "e.g.   $(basename "$0") btcrecover.py --help" >&2
+    exit 2
+fi
+
+SCRIPT="$1"
+shift
+
+if [ ! -f "$CLONE_DIR/$SCRIPT" ]; then
+    echo "No such entry point: $CLONE_DIR/$SCRIPT" >&2
+    exit 1
+fi
+
+exec "$VENV_DIR/bin/python" "$CLONE_DIR/$SCRIPT" "$@"
